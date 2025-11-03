@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../store/store';
@@ -33,7 +33,7 @@ const PaintRecipeWorkstation: React.FC = () => {
 
   const { currentColor, recentColors } = useSelector((state: RootState) => state.palette);
 
-  const [targetColor, setTargetColor] = useState(currentColor || '#3498db');
+  const [targetColor, setTargetColor] = useState(currentColor);
   const [currentRecipe, setCurrentRecipe] = useState<PaintRecipe | null>(null);
   const [selectedBrand, setSelectedBrand] = useState(
     PAINT_BRANDS.find(b => b.id === MICHAELS_PAINTS.id) || PAINT_BRANDS[0]
@@ -47,13 +47,18 @@ const PaintRecipeWorkstation: React.FC = () => {
   const [paintAmount, setPaintAmount] = useState('1'); // cups
   const [surfaceArea, setSurfaceArea] = useState('100'); // square feet
 
-  const [didInitWithPalette, setDidInitWithPalette] = useState(false);
+  // Auto-generate a recipe when arriving with a color, and on subsequent color changes
+  const lastGeneratedRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!didInitWithPalette && currentColor) {
-      setTargetColor(currentColor);
-      setDidInitWithPalette(true);
-    }
-  }, [currentColor, didInitWithPalette]);
+    if (!currentColor) return;
+    if (lastGeneratedRef.current === currentColor) return;
+    setTargetColor(currentColor);
+    // Defer generation to next tick so state updates settle
+    setTimeout(() => {
+      generateRecipe();
+      lastGeneratedRef.current = currentColor;
+    }, 0);
+  }, [currentColor]);
 
   const generateRecipe = async () => {
     setIsGenerating(true);

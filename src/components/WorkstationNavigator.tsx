@@ -57,13 +57,6 @@ const WORKSTATIONS: WorkstationInfo[] = [
     color: '#8e44ad',
   },
   {
-    mode: 'accessibility-suite',
-    name: 'Accessibility',
-    icon: '♿',
-    description: 'WCAG testing & color blindness simulation',
-    color: '#27ae60',
-  },
-  {
     mode: 'harmony-explorer',
     name: 'Harmony Explorer',
     icon: '⚖️',

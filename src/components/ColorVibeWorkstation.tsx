@@ -12,7 +12,6 @@ import {
   ColorHarmonyExplorer,
   ColorTrendsInspiration,
   PerceptualColorLab,
-  AccessibilityWorkstation,
 } from './workstations';
 import SimplifiedStudio from './SimplifiedStudio';
 import WorkstationNavigator from './WorkstationNavigator';
@@ -32,8 +31,6 @@ const ColorVibeWorkstation: React.FC = () => {
         return <ColorTheoryLab />;
       case 'perceptual-lab':
         return <PerceptualColorLab />;
-      case 'accessibility-suite':
-        return <AccessibilityWorkstation />;
       case 'paint-recipes':
         return <PaintRecipeWorkstation />;
       case 'scanner':

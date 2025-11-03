@@ -1,6 +1,6 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
-export type WorkstationMode = 'main' | 'scanner' | 'paint-recipes' | 'theory-lab' | 'perceptual-lab' | 'accessibility-suite' | 'harmony-explorer' | 'trends-inspiration' | 'image-extractor';
+export type WorkstationMode = 'main' | 'scanner' | 'paint-recipes' | 'theory-lab' | 'perceptual-lab' | 'harmony-explorer' | 'trends-inspiration' | 'image-extractor';
 
 export interface UIState {
   currentWorkstation: WorkstationMode;

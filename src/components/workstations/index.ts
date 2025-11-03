@@ -10,7 +10,6 @@ export { default as PerceptualColorLab } from '../PerceptualColorLab';
 export { default as ColorHarmonyExplorer } from '../ColorHarmonyExplorer';
 export { default as ColorTrendsInspiration } from '../ColorTrendsInspiration';
 export { default as ImageColorExtractor } from '../ImageColorExtractor';
-export { default as AccessibilityWorkstation } from '../AccessibilityWorkstation';
 
 // Legacy components removed - using PaintRecipeWorkstation instead
 
@@ -121,23 +120,12 @@ export const WORKSTATION_REGISTRY: Record<string, WorkstationConfig> = {
     dependencies: ['imageColorExtractor', 'optimizedColorEngine'],
     performance: { heavy: true, cacheSize: 300, preload: false },
   },
-  'accessibility-suite': {
-    id: 'accessibility-suite',
-    name: 'Accessibility Suite',
-    icon: '♿',
-    description: 'WCAG compliance testing & color blindness simulation',
-    color: '#27ae60',
-    component: () => import('../AccessibilityWorkstation'),
-    features: ['wcag-testing', 'contrast-analysis', 'colorblind-simulation', 'batch-testing'],
-    dependencies: ['advancedColorTechnologies', 'optimizedColorEngine'],
-    performance: { heavy: false, cacheSize: 200, preload: false },
-  },
 };
 
 // Workstation Categories for Organization
 export const WORKSTATION_CATEGORIES = {
   CORE: ['main', 'scanner', 'paint-recipes'],
-  ANALYSIS: ['theory-lab', 'perceptual-lab', 'harmony-explorer', 'accessibility-suite'],
+  ANALYSIS: ['theory-lab', 'perceptual-lab', 'harmony-explorer'],
   INSPIRATION: ['trends-inspiration', 'image-extractor'],
 } as const;
 

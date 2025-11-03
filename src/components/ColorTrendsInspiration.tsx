@@ -125,6 +125,8 @@ const ColorTrendsInspiration: React.FC = () => {
   const [selectedTrend, setSelectedTrend] = useState<ColorTrend | null>(null);
   const [selectedMood, setSelectedMood] = useState<ColorMood | null>(null);
   const [favoriteColors, setFavoriteColors] = useState<string[]>([]);
+  const [selectedPalette, setSelectedPalette] = useState<CuratedPalette | null>(null);
+
 
   const selectColor = (color: string) => {
     dispatch(addRecentColor(color));
@@ -134,10 +136,14 @@ const ColorTrendsInspiration: React.FC = () => {
 
   const toggleFavorite = (color: string) => {
     setFavoriteColors(prev =>
-      prev.includes(color)
-        ? prev.filter(c => c !== color)
-        : [...prev, color]
+      prev.includes(color) ? prev.filter(c => c !== color) : [...prev, color]
     );
+  };
+
+  const goToRecipe = (color: string) => {
+    dispatch(addRecentColor(color));
+    dispatch(setCurrentColor(color));
+    dispatch(setCurrentWorkstation('paint-recipes'));
   };
   const getPalettesByTab = (tab: ActiveTab): CuratedPalette[] => {
     switch (tab) {
@@ -198,7 +204,12 @@ const ColorTrendsInspiration: React.FC = () => {
       <Text style={[styles.paletteDescription, { color: isDarkMode ? COLORS.dark.text.secondary : COLORS.light.text.secondary }]}>{p.description}</Text>
       <View style={styles.swatchRow}>
         {p.colors.map((c, idx) => (
-          <TouchableOpacity key={idx} style={[styles.paletteSwatch, { backgroundColor: c }]} onPress={() => selectColor(c)} />
+          <View key={idx} style={styles.paletteSwatchWrap}>
+            <TouchableOpacity style={[styles.paletteSwatch, { backgroundColor: c }]} onPress={() => setSelectedPalette(p)} />
+            <TouchableOpacity style={styles.recipeChip} onPress={() => goToRecipe(c)}>
+              <Text style={styles.recipeChipText}>Get Recipe</Text>
+            </TouchableOpacity>
+          </View>
         ))}
       </View>
       {!!p.suggestedApplications?.length && (
@@ -460,7 +471,46 @@ const ColorTrendsInspiration: React.FC = () => {
       <View style={styles.content}>
         {renderCategoryPalettes(activeTab)}
       </View>
+
+      {selectedPalette && (
+        <View style={styles.detailOverlay}>
+          <View style={[styles.detailModal, { backgroundColor: isDarkMode ? COLORS.dark.card : COLORS.light.card }]}>
+            <View style={styles.detailHeader}>
+              <Text style={[styles.detailTitle, { color: isDarkMode ? COLORS.dark.text.primary : COLORS.light.text.primary }]}>
+                {selectedPalette.name}
+              </Text>
+              <TouchableOpacity onPress={() => setSelectedPalette(null)} style={styles.detailClose}>
+                <Text style={styles.detailCloseText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            {!!selectedPalette.description && (
+              <Text style={[styles.detailDescription, { color: isDarkMode ? COLORS.dark.text.secondary : COLORS.light.text.secondary }]}>
+                {selectedPalette.description}
+              </Text>
+            )}
+            <View style={styles.detailGrid}>
+              {selectedPalette.colors.map((c, idx) => (
+                <View key={idx} style={styles.detailItem}>
+                  <View style={[styles.detailSwatch, { backgroundColor: c }]} />
+                  <Text style={[styles.detailHex, { color: isDarkMode ? COLORS.dark.text.primary : COLORS.light.text.primary }]}>
+                    {c.toUpperCase()}
+                  </Text>
+                  <View style={styles.detailActions}>
+                    <TouchableOpacity style={styles.detailBtn} onPress={() => { selectColor(c); setSelectedPalette(null); }}>
+                      <Text style={styles.detailBtnText}>Pick</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.detailBtnPrimary} onPress={() => { goToRecipe(c); setSelectedPalette(null); }}>
+                      <Text style={styles.detailBtnPrimaryText}>Get Recipe</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
+        </View>
+      )}
     </View>
+
   );
 };
 
@@ -509,13 +559,33 @@ const styles = StyleSheet.create({
   paletteName: { fontSize: TYPOGRAPHY.fontSize.lg, fontWeight: 'bold' },
   paletteDescription: { fontSize: TYPOGRAPHY.fontSize.base, marginBottom: SPACING[2] },
   swatchRow: { flexDirection: 'row', gap: SPACING[2], marginTop: SPACING[2], marginBottom: SPACING[2] },
+  paletteSwatchWrap: { flex: 1, height: 48, position: 'relative' },
   paletteSwatch: { flex: 1, height: 48, borderRadius: BORDER_RADIUS.lg, ...SHADOWS.sm },
+  recipeChip: { position: 'absolute', right: 6, bottom: 6, backgroundColor: 'rgba(0,0,0,0.55)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
+  recipeChipText: { color: '#fff', fontSize: 10, fontWeight: '700' },
   saveButton: { paddingHorizontal: SPACING[3], paddingVertical: SPACING[1], borderRadius: BORDER_RADIUS.base, borderWidth: 1 },
   saveButtonText: { fontSize: TYPOGRAPHY.fontSize.sm, fontWeight: '700' },
 
   usageTitle: { fontSize: TYPOGRAPHY.fontSize.base, fontWeight: 'bold', marginBottom: SPACING[2] },
   usageItem: { fontSize: TYPOGRAPHY.fontSize.sm, lineHeight: 20, marginBottom: SPACING[1] },
   comingSoonText: { textAlign: 'center', fontSize: TYPOGRAPHY.fontSize.lg, marginTop: SPACING[8] },
+  detailOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: SPACING[4] },
+  detailModal: { width: '100%', maxWidth: 960, borderRadius: BORDER_RADIUS.xl, padding: SPACING[5], borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)' },
+  detailHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: SPACING[3] },
+  detailTitle: { fontSize: TYPOGRAPHY.fontSize.xl, fontWeight: 'bold' },
+  detailClose: { paddingHorizontal: SPACING[2], paddingVertical: SPACING[1], borderRadius: BORDER_RADIUS.base, backgroundColor: 'rgba(0,0,0,0.35)' },
+  detailCloseText: { color: '#fff', fontWeight: '700' },
+  detailDescription: { fontSize: TYPOGRAPHY.fontSize.sm, marginBottom: SPACING[3] },
+  detailGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING[3] },
+  detailItem: { width: (SCREEN_WIDTH - 160) / 4, minWidth: 180 },
+  detailSwatch: { height: 80, borderRadius: BORDER_RADIUS.lg, ...SHADOWS.sm, marginBottom: SPACING[2] },
+  detailHex: { fontFamily: 'monospace', fontSize: TYPOGRAPHY.fontSize.sm, marginBottom: SPACING[2] },
+  detailActions: { flexDirection: 'row', gap: SPACING[2] },
+  detailBtn: { paddingHorizontal: SPACING[3], paddingVertical: SPACING[1], borderRadius: BORDER_RADIUS.base, backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
+  detailBtnText: { color: '#fff', fontWeight: '700', fontSize: TYPOGRAPHY.fontSize.sm },
+  detailBtnPrimary: { paddingHorizontal: SPACING[3], paddingVertical: SPACING[1], borderRadius: BORDER_RADIUS.base, backgroundColor: COLORS.primary[500] },
+  detailBtnPrimaryText: { color: '#fff', fontWeight: '700', fontSize: TYPOGRAPHY.fontSize.sm },
+
 });
 
 export default ColorTrendsInspiration;

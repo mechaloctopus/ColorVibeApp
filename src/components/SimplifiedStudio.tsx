@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, SafeAreaView, Pressable, TextInput, LayoutChang
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../store/store';
 import { setCurrentWorkstation } from '../store/slices/uiSlice';
-import { setMusicalMode } from '../store/slices/paletteSlice';
+import { setMusicalMode, setCurrentColor as setPaletteCurrentColor, addRecentColor } from '../store/slices/paletteSlice';
 import { setCurrentColor as setHslColor } from '../store/slices/colorSlice';
 import { hslToHex, hexToHsl } from '../utils/colorEngine';
 import { generatePalette, generateAdvancedPalette } from '../utils/paletteGenerator';
@@ -114,6 +114,13 @@ const SimplifiedStudio: React.FC = () => {
     return valid ? withHash.toLowerCase() : currentColor;
   }, [hexInput, currentColor]);
 
+  // Keep global currentColor in sync with the studio input so other workstations (e.g., Paint Recipes) use the latest color
+  useEffect(() => {
+    if (sanitizedHex && sanitizedHex !== currentColor) {
+      dispatch(setPaletteCurrentColor(sanitizedHex));
+    }
+  }, [sanitizedHex, currentColor, dispatch]);
+
   const palette = useMemo(() => {
     const hsl = hexToHsl(sanitizedHex) || baseHsl;
     const baseHue = hsl.h;
@@ -198,9 +205,17 @@ const SimplifiedStudio: React.FC = () => {
               <Text style={[styles.sectionTitle, { color: isDarkMode ? COLORS.dark.text.primary : COLORS.light.text.primary }]}>Generated Palette</Text>
               <View style={styles.swatchGrid}>
                 {palette.map((c, idx) => (
-                  <Pressable key={idx} onPress={() => copyToClipboard(c)} style={[styles.swatch, { backgroundColor: c }]}>
-                    <Text style={styles.swatchText}>{c.toUpperCase()}</Text>
-                  </Pressable>
+                  <View key={idx} style={styles.swatchWrap}>
+                    <Pressable onPress={() => copyToClipboard(c)} style={[styles.swatch, { backgroundColor: c }]}>
+                      <Text style={styles.swatchText}>{c.toUpperCase()}</Text>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => { dispatch(setPaletteCurrentColor(c)); dispatch(addRecentColor(c)); dispatch(setCurrentWorkstation('paint-recipes')); }}
+                      style={styles.recipeChip}
+                    >
+                      <Text style={styles.recipeChipText}>Get Recipe</Text>
+                    </Pressable>
+                  </View>
                 ))}
               </View>
               <View style={styles.actionsRow}>
@@ -250,8 +265,11 @@ const styles = StyleSheet.create({
   paletteCard: { padding: SPACING[5], backgroundColor: '#ffffff', borderRadius: BORDER_RADIUS.xl, ...SHADOWS.base, minHeight: 200 },
   sectionTitle: { fontSize: TYPOGRAPHY.fontSize.lg, fontWeight: '700', marginBottom: SPACING[3] },
   swatchGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  swatch: { width: 120, height: 80, borderRadius: 12, justifyContent: 'flex-end', alignItems: 'center', paddingBottom: 8, ...SHADOWS.sm },
+  swatchWrap: { width: 120, height: 80, position: 'relative' },
+  swatch: { width: '100%', height: '100%', borderRadius: 12, justifyContent: 'flex-end', alignItems: 'center', paddingBottom: 8, ...SHADOWS.sm },
   swatchText: { color: '#fff', fontSize: 12, fontWeight: '700', textShadowColor: 'rgba(0,0,0,0.35)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2, fontFamily: 'monospace' },
+  recipeChip: { position: 'absolute', right: 6, bottom: 6, backgroundColor: 'rgba(0,0,0,0.55)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
+  recipeChipText: { color: '#fff', fontSize: 10, fontWeight: '700' },
 
   actionsRow: { marginTop: SPACING[4], flexDirection: 'row', gap: 12 },
   primaryBtn: { backgroundColor: COLORS.primary[500], paddingVertical: 10, paddingHorizontal: 16, borderRadius: 10 },
