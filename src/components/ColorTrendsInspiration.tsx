@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, TextInput } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../store/store';
-import { addRecentColor, setCurrentColor } from '../store/slices/paletteSlice';
-import { optimizedHexToRgb, optimizedRgbToHsl } from '../utils/optimizedColorEngine';
+import { addRecentColor, setCurrentColor, savePalette } from '../store/slices/paletteSlice';
 import { COLORS, SPACING, BORDER_RADIUS, SHADOWS, TYPOGRAPHY } from '../styles/designSystem';
+import { setCurrentWorkstation } from '../store/slices/uiSlice';
+import { ALL_CURATED_PALETTES, SEASONAL_PALETTES, DESIGN_TREND_PALETTES, INDUSTRY_PALETTES, MOOD_PALETTES, CULTURAL_PALETTES, CuratedPalette } from '../data/curatedPalettes';
+import type { Palette } from '../store/slices/paletteSlice';
+
+
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -114,29 +118,126 @@ const COLOR_MOODS: ColorMood[] = [
 const ColorTrendsInspiration: React.FC = () => {
   const { isDarkMode } = useSelector((state: RootState) => state.ui);
   const dispatch = useDispatch();
-  
-  const [activeTab, setActiveTab] = useState<'trends' | 'moods' | 'seasonal' | 'custom'>('trends');
+
+  type ActiveTab = 'all' | 'trends' | 'moods' | 'seasonal' | 'industry' | 'cultural';
+  const [activeTab, setActiveTab] = useState<ActiveTab>('all');
+  const [query, setQuery] = useState('');
   const [selectedTrend, setSelectedTrend] = useState<ColorTrend | null>(null);
   const [selectedMood, setSelectedMood] = useState<ColorMood | null>(null);
   const [favoriteColors, setFavoriteColors] = useState<string[]>([]);
 
   const selectColor = (color: string) => {
     dispatch(addRecentColor(color));
-    
-    const rgb = optimizedHexToRgb(color);
-    if (rgb) {
-      const hsl = optimizedRgbToHsl(rgb.r, rgb.g, rgb.b);
-      dispatch(setCurrentColor(color));
-    }
+    dispatch(setCurrentColor(color));
+    dispatch(setCurrentWorkstation('main'));
   };
 
   const toggleFavorite = (color: string) => {
-    setFavoriteColors(prev => 
-      prev.includes(color) 
+    setFavoriteColors(prev =>
+      prev.includes(color)
         ? prev.filter(c => c !== color)
         : [...prev, color]
     );
   };
+  const getPalettesByTab = (tab: ActiveTab): CuratedPalette[] => {
+    switch (tab) {
+      case 'all':
+        return ALL_CURATED_PALETTES;
+      case 'trends':
+        return DESIGN_TREND_PALETTES;
+      case 'moods':
+        return MOOD_PALETTES;
+      case 'seasonal':
+        return SEASONAL_PALETTES;
+      case 'industry':
+        return INDUSTRY_PALETTES;
+      case 'cultural':
+        return CULTURAL_PALETTES;
+      default:
+        return [];
+    }
+  };
+
+  const filterPalettes = (list: CuratedPalette[]): CuratedPalette[] => {
+    const q = query.trim().toLowerCase();
+    if (!q) return list;
+    const hexPart = q.replace('#', '');
+    return list.filter(p => {
+      const text = `${p.name} ${p.description} ${(p.tags || []).join(' ')}`.toLowerCase();
+      const textMatch = text.includes(q);
+      const colorMatch = p.colors.some(c => c.toLowerCase().includes(hexPart));
+      return textMatch || colorMatch;
+    });
+  };
+
+  const handleSavePalette = (p: CuratedPalette) => {
+    const payload: Palette = { id: `curated-${p.id}`, name: p.name, colors: p.colors, type: 'custom', createdAt: Date.now() };
+    dispatch(savePalette(payload));
+  };
+
+  const renderPaletteCard = (p: CuratedPalette) => (
+    <View
+      key={p.id}
+      style={[
+        styles.trendCard,
+        {
+          backgroundColor: isDarkMode ? COLORS.dark.card : COLORS.light.card,
+          borderColor: 'transparent',
+        },
+      ]}
+    >
+      <View style={styles.paletteHeader}>
+        <Text style={[styles.paletteName, { color: isDarkMode ? COLORS.dark.text.primary : COLORS.light.text.primary }]}>{p.name}</Text>
+        <TouchableOpacity
+          onPress={() => handleSavePalette(p)}
+          style={[styles.saveButton, { borderColor: isDarkMode ? COLORS.dark.border : COLORS.light.border, backgroundColor: 'transparent' }]}
+        >
+          <Text style={[styles.saveButtonText, { color: COLORS.primary[500] }]}>Save</Text>
+        </TouchableOpacity>
+      </View>
+      <Text style={[styles.paletteDescription, { color: isDarkMode ? COLORS.dark.text.secondary : COLORS.light.text.secondary }]}>{p.description}</Text>
+      <View style={styles.swatchRow}>
+        {p.colors.map((c, idx) => (
+          <TouchableOpacity key={idx} style={[styles.paletteSwatch, { backgroundColor: c }]} onPress={() => selectColor(c)} />
+        ))}
+      </View>
+      {!!p.suggestedApplications?.length && (
+        <View style={{ marginTop: SPACING[2] }}>
+          <Text style={{ fontSize: TYPOGRAPHY.fontSize.xs, color: isDarkMode ? COLORS.dark.text.tertiary : COLORS.light.text.tertiary }}>
+            Suggested: {p.suggestedApplications.join(', ')}
+          </Text>
+        </View>
+      )}
+    </View>
+  );
+
+  const getTitleForTab = (tab: ActiveTab) => {
+    switch (tab) {
+      case 'all': return 'All Curated Palettes';
+      case 'trends': return 'Design Trends';
+      case 'moods': return 'Mood-based Palettes';
+      case 'seasonal': return 'Seasonal Palettes';
+      case 'industry': return 'Industry-specific Palettes';
+      case 'cultural': return 'Cultural & Regional Palettes';
+      default: return '';
+    }
+  };
+
+  const renderCategoryPalettes = (tab: ActiveTab) => {
+    const data = filterPalettes(getPalettesByTab(tab));
+    return (
+      <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
+        <Text style={[styles.sectionTitle, { color: isDarkMode ? COLORS.dark.text.primary : COLORS.light.text.primary }]}>
+          {getTitleForTab(tab)}
+        </Text>
+        {data.map(renderPaletteCard)}
+        {data.length === 0 && (
+          <Text style={[styles.comingSoonText, { color: isDarkMode ? COLORS.dark.text.secondary : COLORS.light.text.secondary }]}>No palettes match your search.</Text>
+        )}
+      </ScrollView>
+    );
+  };
+
 
   const renderTrendCard = (trend: ColorTrend) => (
     <TouchableOpacity
@@ -168,7 +269,7 @@ const ColorTrendsInspiration: React.FC = () => {
           </View>
         </View>
       </View>
-      
+
       <View style={styles.colorPreview}>
         {trend.colors.map((color, index) => (
           <TouchableOpacity
@@ -178,7 +279,7 @@ const ColorTrendsInspiration: React.FC = () => {
           />
         ))}
       </View>
-      
+
       {selectedTrend?.id === trend.id && (
         <View style={styles.trendDetails}>
           <Text style={[styles.inspirationTitle, { color: isDarkMode ? COLORS.dark.text.primary : COLORS.light.text.primary }]}>
@@ -187,7 +288,7 @@ const ColorTrendsInspiration: React.FC = () => {
           <Text style={[styles.inspirationText, { color: isDarkMode ? COLORS.dark.text.secondary : COLORS.light.text.secondary }]}>
             {trend.inspiration}
           </Text>
-          
+
           <View style={styles.colorGrid}>
             {trend.colors.map((color, index) => (
               <View key={index} style={styles.colorItem}>
@@ -237,7 +338,7 @@ const ColorTrendsInspiration: React.FC = () => {
           {mood.emotion}
         </Text>
       </View>
-      
+
       <View style={styles.moodColors}>
         {mood.colors.map((color, index) => (
           <TouchableOpacity
@@ -247,7 +348,7 @@ const ColorTrendsInspiration: React.FC = () => {
           />
         ))}
       </View>
-      
+
       {selectedMood?.id === mood.id && (
         <View style={styles.moodDetails}>
           <Text style={[styles.usageTitle, { color: isDarkMode ? COLORS.dark.text.primary : COLORS.light.text.primary }]}>
@@ -293,10 +394,12 @@ const ColorTrendsInspiration: React.FC = () => {
   );
 
   const tabs = [
+    { id: 'all', title: 'All', icon: '✨' },
     { id: 'trends', title: 'Trends', icon: '📈' },
-    { id: 'moods', title: 'Moods', icon: '🎭' },
-    { id: 'seasonal', title: 'Seasonal', icon: '🍂' },
-    { id: 'custom', title: 'Custom', icon: '⭐' },
+    { id: 'seasonal', title: 'Seasonal', icon: '🍃' },
+    { id: 'moods', title: 'Mood', icon: '🎭' },
+    { id: 'industry', title: 'Industry', icon: '🏢' },
+    { id: 'cultural', title: 'Cultural', icon: '🌍' },
   ];
 
   return (
@@ -307,6 +410,23 @@ const ColorTrendsInspiration: React.FC = () => {
           Color Trends & Inspiration
         </Text>
       </View>
+        <View style={styles.searchRow}>
+          <TextInput
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Search palettes by name, tag, or #hex"
+            placeholderTextColor={isDarkMode ? COLORS.dark.text.tertiary : COLORS.light.text.tertiary}
+            style={[
+              styles.searchInput,
+              {
+                backgroundColor: isDarkMode ? COLORS.dark.surface : COLORS.light.surface,
+                borderColor: isDarkMode ? COLORS.dark.border : COLORS.light.border,
+                color: isDarkMode ? COLORS.dark.text.primary : COLORS.light.text.primary,
+              },
+            ]}
+          />
+        </View>
+
 
       {/* Tab Navigation */}
       <View style={styles.tabNavigation}>
@@ -321,7 +441,7 @@ const ColorTrendsInspiration: React.FC = () => {
                 borderBottomColor: COLORS.primary[500],
               },
             ]}
-            onPress={() => setActiveTab(tab.id as any)}
+            onPress={() => setActiveTab(tab.id as ActiveTab)}
           >
             <Text style={styles.tabIcon}>{tab.icon}</Text>
             <Text style={[
@@ -338,22 +458,7 @@ const ColorTrendsInspiration: React.FC = () => {
 
       {/* Tab Content */}
       <View style={styles.content}>
-        {activeTab === 'trends' && renderTrendsTab()}
-        {activeTab === 'moods' && renderMoodsTab()}
-        {activeTab === 'seasonal' && (
-          <View style={styles.tabContent}>
-            <Text style={[styles.comingSoonText, { color: isDarkMode ? COLORS.dark.text.secondary : COLORS.light.text.secondary }]}>
-              Seasonal Color Palettes - Coming Soon
-            </Text>
-          </View>
-        )}
-        {activeTab === 'custom' && (
-          <View style={styles.tabContent}>
-            <Text style={[styles.comingSoonText, { color: isDarkMode ? COLORS.dark.text.secondary : COLORS.light.text.secondary }]}>
-              Custom Inspiration Boards - Coming Soon
-            </Text>
-          </View>
-        )}
+        {renderCategoryPalettes(activeTab)}
       </View>
     </View>
   );
@@ -398,6 +503,16 @@ const styles = StyleSheet.create({
   moodColors: { flexDirection: 'row', gap: SPACING[2], marginBottom: SPACING[3] },
   moodColor: { flex: 1, height: 50, borderRadius: BORDER_RADIUS.lg, ...SHADOWS.sm },
   moodDetails: { marginTop: SPACING[3], paddingTop: SPACING[3], borderTopWidth: 1, borderTopColor: 'rgba(255, 255, 255, 0.1)' },
+  searchRow: { paddingHorizontal: SPACING[5], paddingVertical: SPACING[2] },
+  searchInput: { borderWidth: 1, borderRadius: BORDER_RADIUS.lg, paddingHorizontal: SPACING[3], paddingVertical: SPACING[2], fontSize: TYPOGRAPHY.fontSize.sm },
+  paletteHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: SPACING[2] },
+  paletteName: { fontSize: TYPOGRAPHY.fontSize.lg, fontWeight: 'bold' },
+  paletteDescription: { fontSize: TYPOGRAPHY.fontSize.base, marginBottom: SPACING[2] },
+  swatchRow: { flexDirection: 'row', gap: SPACING[2], marginTop: SPACING[2], marginBottom: SPACING[2] },
+  paletteSwatch: { flex: 1, height: 48, borderRadius: BORDER_RADIUS.lg, ...SHADOWS.sm },
+  saveButton: { paddingHorizontal: SPACING[3], paddingVertical: SPACING[1], borderRadius: BORDER_RADIUS.base, borderWidth: 1 },
+  saveButtonText: { fontSize: TYPOGRAPHY.fontSize.sm, fontWeight: '700' },
+
   usageTitle: { fontSize: TYPOGRAPHY.fontSize.base, fontWeight: 'bold', marginBottom: SPACING[2] },
   usageItem: { fontSize: TYPOGRAPHY.fontSize.sm, lineHeight: 20, marginBottom: SPACING[1] },
   comingSoonText: { textAlign: 'center', fontSize: TYPOGRAPHY.fontSize.lg, marginTop: SPACING[8] },

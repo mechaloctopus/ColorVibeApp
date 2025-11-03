@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../store/store';
-import { addRecentColor } from '../store/slices/paletteSlice';
-import { generatePaintRecipe, PaintRecipe, PAINT_BRANDS } from '../utils/paintRecipes';
+import { addRecentColor, setCurrentColor } from '../store/slices/paletteSlice';
+import { generatePaintRecipe, PaintRecipe, PAINT_BRANDS, MICHAELS_PAINTS } from '../utils/paintRecipes';
 import { optimizedHexToRgb, analyzeColorOptimized } from '../utils/optimizedColorEngine';
 import { COLORS, SPACING, BORDER_RADIUS, SHADOWS, TYPOGRAPHY } from '../styles/designSystem';
+import { rgbToCmyk } from '../utils/colorEngine';
+
 
 interface RecipeHistory {
   id: string;
@@ -24,13 +26,18 @@ interface PaintProject {
   notes?: string;
 }
 
+
 const PaintRecipeWorkstation: React.FC = () => {
   const { isDarkMode } = useSelector((state: RootState) => state.ui);
   const dispatch = useDispatch();
-  
-  const [targetColor, setTargetColor] = useState('#3498db');
+
+  const { currentColor, recentColors } = useSelector((state: RootState) => state.palette);
+
+  const [targetColor, setTargetColor] = useState(currentColor || '#3498db');
   const [currentRecipe, setCurrentRecipe] = useState<PaintRecipe | null>(null);
-  const [selectedBrand, setSelectedBrand] = useState(PAINT_BRANDS[0]);
+  const [selectedBrand, setSelectedBrand] = useState(
+    PAINT_BRANDS.find(b => b.id === MICHAELS_PAINTS.id) || PAINT_BRANDS[0]
+  );
   const [isGenerating, setIsGenerating] = useState(false);
   const [recipeHistory, setRecipeHistory] = useState<RecipeHistory[]>([]);
   const [currentProject, setCurrentProject] = useState<PaintProject | null>(null);
@@ -40,22 +47,28 @@ const PaintRecipeWorkstation: React.FC = () => {
   const [paintAmount, setPaintAmount] = useState('1'); // cups
   const [surfaceArea, setSurfaceArea] = useState('100'); // square feet
 
+  const [didInitWithPalette, setDidInitWithPalette] = useState(false);
   useEffect(() => {
-    if (targetColor) {
-      generateRecipe();
+    if (!didInitWithPalette && currentColor) {
+      setTargetColor(currentColor);
+      setDidInitWithPalette(true);
     }
-  }, [targetColor, selectedBrand]);
+  }, [currentColor, didInitWithPalette]);
 
   const generateRecipe = async () => {
     setIsGenerating(true);
-    
+
     try {
       const rgb = optimizedHexToRgb(targetColor);
       if (!rgb) throw new Error('Invalid color');
-      
+
       const recipe = generatePaintRecipe(targetColor, rgb, selectedBrand);
       setCurrentRecipe(recipe);
-      
+
+      // Sync global color and track recent
+      dispatch(setCurrentColor(targetColor));
+      dispatch(addRecentColor(targetColor));
+
       // Add to history
       const historyEntry: RecipeHistory = {
         id: Date.now().toString(),
@@ -64,9 +77,9 @@ const PaintRecipeWorkstation: React.FC = () => {
         timestamp: Date.now(),
         notes: recipeNotes,
       };
-      
+
       setRecipeHistory(prev => [historyEntry, ...prev.slice(0, 19)]); // Keep last 20
-      
+
     } catch (error) {
       Alert.alert('Error', 'Failed to generate paint recipe');
       console.error('Recipe generation error:', error);
@@ -99,7 +112,7 @@ const PaintRecipeWorkstation: React.FC = () => {
 
     const baseAmount = parseFloat(paintAmount) || 1;
     const coverage = parseFloat(surfaceArea) || 100;
-    
+
     // Typical paint coverage: 1 gallon covers ~350 sq ft
     const gallonsNeeded = coverage / 350;
     const scaleFactor = gallonsNeeded / 0.25; // Recipe is for ~1 cup (0.25 gallons)
@@ -118,6 +131,14 @@ const PaintRecipeWorkstation: React.FC = () => {
   const renderRecipeTab = () => {
     const { totalCost, scaledIngredients } = calculatePaintNeeded();
 
+    // Additional system calculations (RGB mix proportions and CMYK)
+    const rgbForSystems = optimizedHexToRgb(targetColor);
+    const sumRGB = rgbForSystems ? rgbForSystems.r + rgbForSystems.g + rgbForSystems.b : 0;
+    const rMix = sumRGB ? Math.round((rgbForSystems!.r / sumRGB) * 100) : 0;
+    const gMix = sumRGB ? Math.round((rgbForSystems!.g / sumRGB) * 100) : 0;
+    const bMix = sumRGB ? Math.round((rgbForSystems!.b / sumRGB) * 100) : 0;
+    const cmyk = rgbForSystems ? rgbToCmyk(rgbForSystems.r, rgbForSystems.g, rgbForSystems.b) : null;
+
     return (
       <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
         {/* Color Input */}
@@ -128,7 +149,7 @@ const PaintRecipeWorkstation: React.FC = () => {
           <View style={styles.colorInputRow}>
             <View style={[styles.colorSwatch, { backgroundColor: targetColor }]} />
             <TextInput
-              style={[styles.colorInput, { 
+              style={[styles.colorInput, {
                 backgroundColor: isDarkMode ? COLORS.dark.surface : COLORS.light.surface,
                 color: isDarkMode ? COLORS.dark.text.primary : COLORS.light.text.primary,
                 borderColor: isDarkMode ? COLORS.dark.border : COLORS.light.border,
@@ -137,6 +158,7 @@ const PaintRecipeWorkstation: React.FC = () => {
               onChangeText={setTargetColor}
               placeholder="#3498db"
               placeholderTextColor={isDarkMode ? COLORS.dark.text.tertiary : COLORS.light.text.tertiary}
+              onSubmitEditing={generateRecipe}
             />
             <TouchableOpacity
               style={[styles.generateButton, { backgroundColor: COLORS.primary[500] }]}
@@ -147,6 +169,38 @@ const PaintRecipeWorkstation: React.FC = () => {
                 {isGenerating ? '⏳' : '🎨'}
               </Text>
             </TouchableOpacity>
+
+              {/* Quick actions under input */}
+              <View style={{ flexDirection: 'row', gap: SPACING[2], marginTop: SPACING[2] }}>
+                <TouchableOpacity
+                  style={[styles.useCurrentButton, { borderColor: isDarkMode ? COLORS.dark.border : COLORS.light.border }]}
+                  onPress={() => {
+                    if (currentColor) {
+                      setTargetColor(currentColor);
+                      generateRecipe();
+                    }
+                  }}
+                >
+                  <Text style={[styles.useCurrentButtonText, { color: isDarkMode ? COLORS.dark.text.primary : COLORS.light.text.primary }]}>Use Studio Color</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Recent Colors */}
+              {recentColors && recentColors.length > 0 && (
+                <View style={{ marginTop: SPACING[3] }}>
+                  <Text style={{ color: isDarkMode ? COLORS.dark.text.secondary : COLORS.light.text.secondary, marginBottom: SPACING[2], fontWeight: '600' }}>Recent</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                    <View style={{ flexDirection: 'row', gap: SPACING[2] }}>
+                      {recentColors.slice(0, 12).map((c, idx) => (
+                        <TouchableOpacity key={idx} onPress={() => { setTargetColor(c); generateRecipe(); }}>
+                          <View style={[styles.recentSwatch, { backgroundColor: c }]} />
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </ScrollView>
+                </View>
+              )}
+
           </View>
         </View>
 
@@ -164,9 +218,11 @@ const PaintRecipeWorkstation: React.FC = () => {
                   {
                     backgroundColor: selectedBrand === brand ? COLORS.primary[500] : 'transparent',
                     borderColor: selectedBrand === brand ? COLORS.primary[500] : (isDarkMode ? COLORS.dark.border : COLORS.light.border),
+                    opacity: brand.paints && brand.paints.length > 0 ? 1 : 0.5,
                   }
                 ]}
                 onPress={() => setSelectedBrand(brand)}
+                disabled={!brand.paints || brand.paints.length === 0}
               >
                 <Text style={[
                   styles.brandButtonText,
@@ -189,7 +245,24 @@ const PaintRecipeWorkstation: React.FC = () => {
               <View style={[styles.accuracyBadge, { backgroundColor: getAccuracyColor(currentRecipe.accuracy) }]}>
                 <Text style={styles.accuracyText}>{currentRecipe.accuracy}%</Text>
               </View>
+
+
             </View>
+            {/* Color Systems Summary */}
+            <View style={[styles.systemRow, { marginBottom: SPACING[3] }]}>
+              <View style={[styles.systemPill, { backgroundColor: isDarkMode ? COLORS.dark.surface : COLORS.light.surface, borderColor: isDarkMode ? COLORS.dark.border : COLORS.light.border }]}>
+                <Text style={{ color: isDarkMode ? COLORS.dark.text.primary : COLORS.light.text.primary, fontFamily: 'monospace' }}>HEX {targetColor.toUpperCase()}</Text>
+              </View>
+              <View style={[styles.systemPill, { backgroundColor: isDarkMode ? COLORS.dark.surface : COLORS.light.surface, borderColor: isDarkMode ? COLORS.dark.border : COLORS.light.border }]}>
+                <Text style={{ color: isDarkMode ? COLORS.dark.text.primary : COLORS.light.text.primary }}>RGB mix: R {rMix}% G {gMix}% B {bMix}%</Text>
+              </View>
+              {cmyk && (
+                <View style={[styles.systemPill, { backgroundColor: isDarkMode ? COLORS.dark.surface : COLORS.light.surface, borderColor: isDarkMode ? COLORS.dark.border : COLORS.light.border }]}>
+                  <Text style={{ color: isDarkMode ? COLORS.dark.text.primary : COLORS.light.text.primary }}>CMYK: C {cmyk.c}% M {cmyk.m}% Y {cmyk.y}% K {cmyk.k}%</Text>
+                </View>
+              )}
+            </View>
+
 
             {/* Ingredients */}
             <View style={styles.ingredientsList}>
@@ -246,7 +319,7 @@ const PaintRecipeWorkstation: React.FC = () => {
           </Text>
           <View style={styles.projectInputs}>
             <TextInput
-              style={[styles.projectInput, { 
+              style={[styles.projectInput, {
                 backgroundColor: isDarkMode ? COLORS.dark.surface : COLORS.light.surface,
                 color: isDarkMode ? COLORS.dark.text.primary : COLORS.light.text.primary,
                 borderColor: isDarkMode ? COLORS.dark.border : COLORS.light.border,
@@ -257,7 +330,7 @@ const PaintRecipeWorkstation: React.FC = () => {
               placeholderTextColor={isDarkMode ? COLORS.dark.text.tertiary : COLORS.light.text.tertiary}
             />
             <TextInput
-              style={[styles.notesInput, { 
+              style={[styles.notesInput, {
                 backgroundColor: isDarkMode ? COLORS.dark.surface : COLORS.light.surface,
                 color: isDarkMode ? COLORS.dark.text.primary : COLORS.light.text.primary,
                 borderColor: isDarkMode ? COLORS.dark.border : COLORS.light.border,
@@ -290,14 +363,14 @@ const PaintRecipeWorkstation: React.FC = () => {
           <Text style={[styles.sectionTitle, { color: isDarkMode ? COLORS.dark.text.primary : COLORS.light.text.primary }]}>
             Paint Calculator
           </Text>
-          
+
           <View style={styles.calculatorInputs}>
             <View style={styles.calculatorRow}>
               <Text style={[styles.calculatorLabel, { color: isDarkMode ? COLORS.dark.text.secondary : COLORS.light.text.secondary }]}>
                 Surface Area (sq ft):
               </Text>
               <TextInput
-                style={[styles.calculatorInput, { 
+                style={[styles.calculatorInput, {
                   backgroundColor: isDarkMode ? COLORS.dark.surface : COLORS.light.surface,
                   color: isDarkMode ? COLORS.dark.text.primary : COLORS.light.text.primary,
                   borderColor: isDarkMode ? COLORS.dark.border : COLORS.light.border,
@@ -308,13 +381,13 @@ const PaintRecipeWorkstation: React.FC = () => {
                 placeholder="100"
               />
             </View>
-            
+
             <View style={styles.calculatorRow}>
               <Text style={[styles.calculatorLabel, { color: isDarkMode ? COLORS.dark.text.secondary : COLORS.light.text.secondary }]}>
                 Base Amount (cups):
               </Text>
               <TextInput
-                style={[styles.calculatorInput, { 
+                style={[styles.calculatorInput, {
                   backgroundColor: isDarkMode ? COLORS.dark.surface : COLORS.light.surface,
                   color: isDarkMode ? COLORS.dark.text.primary : COLORS.light.text.primary,
                   borderColor: isDarkMode ? COLORS.dark.border : COLORS.light.border,
@@ -332,7 +405,7 @@ const PaintRecipeWorkstation: React.FC = () => {
               <Text style={[styles.calculatorResultsTitle, { color: isDarkMode ? COLORS.dark.text.primary : COLORS.light.text.primary }]}>
                 Scaled Recipe
               </Text>
-              
+
               {scaledIngredients.map((ingredient, index) => (
                 <View key={index} style={styles.scaledIngredient}>
                   <View style={[styles.paintSwatch, { backgroundColor: ingredient.paint.hex }]} />
@@ -349,7 +422,7 @@ const PaintRecipeWorkstation: React.FC = () => {
                   </Text>
                 </View>
               ))}
-              
+
               <View style={styles.totalCostRow}>
                 <Text style={[styles.totalCostLabel, { color: isDarkMode ? COLORS.dark.text.primary : COLORS.light.text.primary }]}>
                   Total Estimated Cost:
@@ -459,6 +532,11 @@ const styles = StyleSheet.create({
   brandSelector: { marginTop: SPACING[2] },
   brandButton: { paddingHorizontal: SPACING[4], paddingVertical: SPACING[2], borderRadius: BORDER_RADIUS.lg, borderWidth: 1, marginRight: SPACING[2] },
   brandButtonText: { fontSize: TYPOGRAPHY.fontSize.sm, fontWeight: '600' },
+  useCurrentButton: { paddingHorizontal: SPACING[3], paddingVertical: SPACING[2], borderRadius: BORDER_RADIUS.lg, borderWidth: 1 },
+  useCurrentButtonText: { fontSize: TYPOGRAPHY.fontSize.sm, fontWeight: '600' },
+  recentSwatch: { width: 28, height: 28, borderRadius: BORDER_RADIUS.base, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
+  systemRow: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING[2] },
+  systemPill: { paddingHorizontal: SPACING[3], paddingVertical: SPACING[1], borderRadius: BORDER_RADIUS.lg, borderWidth: 1 },
   recipeHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: SPACING[3] },
   accuracyBadge: { paddingHorizontal: SPACING[2], paddingVertical: SPACING[1], borderRadius: BORDER_RADIUS.base },
   accuracyText: { color: '#ffffff', fontSize: TYPOGRAPHY.fontSize.xs, fontWeight: 'bold' },

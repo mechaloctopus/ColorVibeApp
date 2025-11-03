@@ -371,8 +371,11 @@ export function generatePaintRecipe(
     throw new Error('Invalid RGB color values');
   }
 
+  // Determine active brand (fallback to Michaels if selected brand has no data)
+  const activeBrand = brand && brand.paints && brand.paints.length > 0 ? brand : MICHAELS_PAINTS;
+
   // Find base color (closest match) with improved algorithm
-  const baseColor = findClosestPaintMatchEnhanced(targetRgb, brand);
+  const baseColor = findClosestPaintMatchEnhanced(targetRgb, activeBrand);
 
   // Calculate color accuracy using Delta E CIE2000 for better perceptual accuracy
   const colorAccuracy = calculateEnhancedColorAccuracy(targetRgb, baseColor.rgb);
@@ -396,7 +399,7 @@ export function generatePaintRecipe(
   // Adjust lightness
   if (targetLuminance > baseLuminance + 0.1) {
     // Need to lighten - add white
-    const white = brand.colors.find(c => c.name.includes('White')) || brand.colors[0];
+    const white = activeBrand.colors.find(c => c.name.includes('White')) || activeBrand.colors[0];
     const whiteRatio = Math.min(25, (targetLuminance - baseLuminance) * 50);
     baseRatio -= whiteRatio;
     
@@ -411,7 +414,7 @@ export function generatePaintRecipe(
     tips.push('White can make colors appear cooler - add a tiny amount of warm color if needed');
   } else if (targetLuminance < baseLuminance - 0.1) {
     // Need to darken - add complementary or black
-    const black = brand.colors.find(c => c.name.includes('Black')) || brand.colors[1];
+    const black = activeBrand.colors.find(c => c.name.includes('Black')) || activeBrand.colors[1];
     const blackRatio = Math.min(15, (baseLuminance - targetLuminance) * 30);
     baseRatio -= blackRatio;
     
@@ -429,7 +432,7 @@ export function generatePaintRecipe(
   // Adjust hue if needed
   const hueAdjustment = analyzeHueAdjustment(targetRgb, baseColor.rgb);
   if (hueAdjustment.needed) {
-    const adjustmentColor = findHueAdjustmentColor(hueAdjustment.direction, brand);
+    const adjustmentColor = findHueAdjustmentColor(hueAdjustment.direction, activeBrand);
     if (adjustmentColor) {
       const adjustmentRatio = Math.min(15, hueAdjustment.amount * 20);
       baseRatio -= adjustmentRatio;
@@ -616,21 +619,22 @@ export function calculateProjectCost(recipes: PaintRecipe[], surfaceArea: number
 
 // Export paint brands for components
 export const PAINT_BRANDS: PaintBrand[] = [
+  MICHAELS_PAINTS,
   {
     id: 'winsor-newton',
-    name: 'Winsor & Newton',
+    name: 'Winsor & Newton (coming soon)',
     colors: [],
     paints: [],
   },
   {
     id: 'golden',
-    name: 'Golden',
+    name: 'Golden (coming soon)',
     colors: [],
     paints: [],
   },
   {
     id: 'liquitex',
-    name: 'Liquitex',
+    name: 'Liquitex (coming soon)',
     colors: [],
     paints: [],
   },
