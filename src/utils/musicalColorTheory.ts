@@ -12,12 +12,22 @@ export interface MusicalMode {
 }
 
 export const MUSICAL_MODES: Record<string, MusicalMode> = {
+  // Major aliases
   ionian: {
     name: 'Ionian (Major)',
     intervals: [0, 2, 4, 5, 7, 9, 11], // W-W-H-W-W-W-H
     emotion: 'bright, happy, optimistic',
     energy: 'high',
     description: 'The classic major scale - bright, stable, and uplifting',
+    colorCharacteristics: 'Vibrant, saturated colors with high luminance',
+    examples: ['Sunrise palettes', 'Spring colors', 'Celebration themes'],
+  },
+  major: {
+    name: 'Ionian (Major)',
+    intervals: [0, 2, 4, 5, 7, 9, 11],
+    emotion: 'bright, happy, optimistic',
+    energy: 'high',
+    description: 'Alias of Ionian (Major) for UI consistency',
     colorCharacteristics: 'Vibrant, saturated colors with high luminance',
     examples: ['Sunrise palettes', 'Spring colors', 'Celebration themes'],
   },
@@ -57,12 +67,22 @@ export const MUSICAL_MODES: Record<string, MusicalMode> = {
     colorCharacteristics: 'Warm, earthy colors with medium saturation',
     examples: ['Earth tones', 'Folk art', 'Rustic themes'],
   },
+  // Minor aliases
   aeolian: {
     name: 'Aeolian (Natural Minor)',
     intervals: [0, 2, 3, 5, 7, 8, 10], // W-H-W-W-H-W-W
     emotion: 'melancholic, introspective, deep',
     energy: 'low',
     description: 'The natural minor scale - sad, introspective, and emotional',
+    colorCharacteristics: 'Muted, desaturated colors with lower luminance',
+    examples: ['Rainy days', 'Melancholic art', 'Introspective themes'],
+  },
+  minor: {
+    name: 'Aeolian (Natural Minor)',
+    intervals: [0, 2, 3, 5, 7, 8, 10],
+    emotion: 'melancholic, introspective, deep',
+    energy: 'low',
+    description: 'Alias of Aeolian (Natural Minor) for UI consistency',
     colorCharacteristics: 'Muted, desaturated colors with lower luminance',
     examples: ['Rainy days', 'Melancholic art', 'Introspective themes'],
   },

@@ -216,8 +216,15 @@ const SaturnRingsColorSystem: React.FC<SaturnRingsColorSystemProps> = ({
     );
   }, [selectedColorInfo, onColorSelect, onColorLongPress]);
 
-  // Render ring with rotation animation
-  const renderColorRing = (ring: ColorRing, rotationValue: Animated.SharedValue<number>) => {
+  // Render ring as a child component to respect Hook rules on web
+  const RingView: React.FC<{
+    ring: ColorRing;
+    rotationValue: Animated.SharedValue<number>;
+    isDarkMode: boolean;
+    centerX: number;
+    centerY: number;
+    renderColorOrb: (color: string, ring: ColorRing, index: number, totalColors: number) => JSX.Element;
+  }> = ({ ring, rotationValue, isDarkMode, centerX, centerY, renderColorOrb }) => {
     const animatedStyle = useAnimatedStyle(() => ({
       transform: [{ rotate: `${rotationValue.value}deg` }],
     }));
@@ -227,10 +234,10 @@ const SaturnRingsColorSystem: React.FC<SaturnRingsColorSystemProps> = ({
         key={ring.id}
         style={[styles.ringContainer, animatedStyle]}
       >
-        {ring.colors.map((color, index) => 
+        {ring.colors.map((color, index) =>
           renderColorOrb(color, ring, index, ring.colors.length)
         )}
-        
+
         {/* Ring label */}
         <View
           style={[
@@ -241,7 +248,7 @@ const SaturnRingsColorSystem: React.FC<SaturnRingsColorSystemProps> = ({
               backgroundColor: isDarkMode ? 'rgba(42, 42, 42, 0.9)' : 'rgba(255, 255, 255, 0.9)',
             },
           ]}
-        >
+       >
           <Text style={[styles.ringLabelText, { color: isDarkMode ? '#ffffff' : '#000000' }]}>
             {ring.name}
           </Text>
@@ -255,9 +262,17 @@ const SaturnRingsColorSystem: React.FC<SaturnRingsColorSystemProps> = ({
   return (
     <View style={styles.container}>
       {/* Saturn's Rings - Multiple rotating color palettes */}
-      {colorRings.map((ring, index) => 
-        renderColorRing(ring, rotationValues[index] || ring1Rotation)
-      )}
+      {colorRings.map((ring, index) => (
+        <RingView
+          key={ring.id}
+          ring={ring}
+          rotationValue={rotationValues[index] || ring1Rotation}
+          isDarkMode={isDarkMode}
+          centerX={centerX}
+          centerY={centerY}
+          renderColorOrb={renderColorOrb}
+        />
+      ))}
 
       {/* Selected Color Info Panel */}
       {selectedColorInfo && (
