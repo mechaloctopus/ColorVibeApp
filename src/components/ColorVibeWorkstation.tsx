@@ -1,6 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView } from 'react-native';
-import { useSelector } from 'react-redux';
+import { View, Text, StyleSheet, SafeAreaView, Pressable } from 'react-native';
+import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../store/store';
 import {
   MainStudio,
@@ -14,12 +14,12 @@ import {
   AccessibilityWorkstation,
 } from './workstations';
 import SimplifiedStudio from './SimplifiedStudio';
-// Navigation overlays removed for web clarity
-
-// All workstations are now fully implemented - no more placeholders!
+import WorkstationNavigator from './WorkstationNavigator';
+import { setCurrentWorkstation } from '../store/slices/uiSlice';
 
 const ColorVibeWorkstation: React.FC = () => {
   const { currentWorkstation, isDarkMode } = useSelector((state: RootState) => state.ui);
+  const dispatch = useDispatch();
 
   const renderCurrentWorkstation = () => {
     switch (currentWorkstation) {
@@ -48,15 +48,35 @@ const ColorVibeWorkstation: React.FC = () => {
 
   const containerStyle = [
     styles.container,
-    { backgroundColor: isDarkMode ? '#1a1a1a' : '#f5f5f5' }
+    { backgroundColor: isDarkMode ? '#1a1a1a' : '#ffffff' }
   ];
 
   return (
     <SafeAreaView style={containerStyle}>
+      {/* Persistent header */}
+      <View style={styles.topHeader}>
+        <Text style={styles.brand}>Color Vibe Studio</Text>
+        <View style={styles.navRow}>
+          <Pressable onPress={() => dispatch(setCurrentWorkstation('main'))} style={styles.navBtn}>
+            <Text style={styles.navText}>Studio</Text>
+          </Pressable>
+          <Pressable onPress={() => dispatch(setCurrentWorkstation('theory-lab'))} style={styles.navBtn}>
+            <Text style={styles.navText}>Labs</Text>
+          </Pressable>
+          {currentWorkstation !== 'main' && (
+            <Pressable onPress={() => dispatch(setCurrentWorkstation('main'))} style={[styles.navBtn, styles.backBtn]}>
+              <Text style={[styles.navText, styles.backText]}>Back to Studio</Text>
+            </Pressable>
+          )}
+        </View>
+      </View>
+
       <View style={styles.workstationContainer}>
         {renderCurrentWorkstation()}
       </View>
 
+      {/* Bottom navigator (always accessible) */}
+      <WorkstationNavigator />
     </SafeAreaView>
   );
 };
@@ -67,7 +87,24 @@ const styles = StyleSheet.create({
   },
   workstationContainer: {
     flex: 1,
+    paddingBottom: 120,
   },
+  topHeader: {
+    height: 56,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+    backgroundColor: '#ffffff',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  brand: { fontSize: 16, fontWeight: '700' },
+  navRow: { flexDirection: 'row', gap: 8 },
+  navBtn: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: '#e5e7eb' },
+  navText: { fontSize: 12, fontWeight: '600' },
+  backBtn: { backgroundColor: '#eff6ff', borderColor: '#bfdbfe' },
+  backText: { color: '#1d4ed8' },
   placeholder: {
     flex: 1,
     justifyContent: 'center',

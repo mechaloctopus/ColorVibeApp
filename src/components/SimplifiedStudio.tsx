@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, Pressable, TextInput, LayoutChangeEvent, Platform } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, Pressable, TextInput, LayoutChangeEvent, Platform, ScrollView, useWindowDimensions } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../store/store';
 import { setCurrentWorkstation } from '../store/slices/uiSlice';
@@ -61,15 +61,17 @@ const SimplifiedStudio: React.FC = () => {
   const [hexInput, setHexInput] = useState<string>(currentColor);
 
   // Wheel geometry state
-  const [wheelSize, setWheelSize] = useState<number>(Math.min(LAYOUT.container.lg, 520));
   const wheelRef = useRef<View | null>(null);
+  const { width: winW, height: winH } = useWindowDimensions();
 
   const baseHsl = useMemo(() => hexToHsl(currentColor) || { h: 200, s: 100, l: 50 }, [currentColor]);
 
-  const onWheelLayout = useCallback((e: LayoutChangeEvent) => {
-    const { width } = e.nativeEvent.layout;
-    setWheelSize(Math.min(width, 520));
-  }, []);
+  // Responsive wheel size: fits viewport comfortably, clamped for usability
+  const wheelSize = useMemo(() => {
+    const max = Math.min(winW * 0.6, winH * 0.6, 420);
+    const min = Math.min(280, Math.max(240, Math.min(winW, winH) * 0.4));
+    return Math.max(min, max);
+  }, [winW, winH]);
 
   const updateFromPoint = useCallback((x: number, y: number) => {
     const r = wheelSize / 2;
@@ -160,55 +162,57 @@ const SimplifiedStudio: React.FC = () => {
       </View>
 
       {/* Main content: 2 columns */}
-      <View style={styles.contentRow}>
-        {/* Left: Color wheel + HEX */}
-        <View style={styles.leftCol}>
-          <View style={styles.wheelCard} onLayout={onWheelLayout}>
-            <View
-              style={{ width: wheelSize, height: wheelSize }}
-              // Capture pointer/touch on web and mobile
-              onStartShouldSetResponder={() => true}
-              onResponderStart={handleResponder}
-              onResponderMove={handleResponder}
-              onResponderRelease={handleResponder}
-            >
-              <OuijaColorPicker size={wheelSize} />
+      <ScrollView style={styles.scrollArea} contentContainerStyle={{ paddingBottom: 140 }}>
+        <View style={[styles.contentRow, winW < 1000 ? { flexDirection: 'column' } : null]}>
+          {/* Left: Color wheel + HEX */}
+          <View style={styles.leftCol}>
+            <View style={styles.wheelCard}>
+              <View
+                style={{ width: wheelSize, height: wheelSize }}
+                // Capture pointer/touch on web and mobile
+                onStartShouldSetResponder={() => true}
+                onResponderStart={handleResponder}
+                onResponderMove={handleResponder}
+                onResponderRelease={handleResponder}
+              >
+                <OuijaColorPicker size={wheelSize} />
+              </View>
+            </View>
+
+            <View style={styles.inputRow}>
+              <Text style={[styles.inputLabel, { color: isDarkMode ? COLORS.dark.text.secondary : COLORS.light.text.secondary }]}>HEX</Text>
+              <TextInput
+                value={hexInput}
+                onChangeText={setHexInput}
+                onSubmitEditing={onHexSubmit}
+                autoCapitalize="none"
+                autoCorrect={false}
+                spellCheck={false}
+                style={[styles.hexInput, { color: isDarkMode ? COLORS.dark.text.primary : COLORS.light.text.primary, borderColor: COLORS.border.focus }]}
+              />
             </View>
           </View>
 
-          <View style={styles.inputRow}>
-            <Text style={[styles.inputLabel, { color: isDarkMode ? COLORS.dark.text.secondary : COLORS.light.text.secondary }]}>HEX</Text>
-            <TextInput
-              value={hexInput}
-              onChangeText={setHexInput}
-              onSubmitEditing={onHexSubmit}
-              autoCapitalize="none"
-              autoCorrect={false}
-              spellCheck={false}
-              style={[styles.hexInput, { color: isDarkMode ? COLORS.dark.text.primary : COLORS.light.text.primary, borderColor: COLORS.border.focus }]}
-            />
-          </View>
-        </View>
-
-        {/* Right: Palette swatches */}
-        <View style={styles.rightCol}>
-          <View style={styles.paletteCard}>
-            <Text style={[styles.sectionTitle, { color: isDarkMode ? COLORS.dark.text.primary : COLORS.light.text.primary }]}>Generated Palette</Text>
-            <View style={styles.swatchGrid}>
-              {palette.map((c, idx) => (
-                <Pressable key={idx} onPress={() => copyToClipboard(c)} style={[styles.swatch, { backgroundColor: c }]}>
-                  <Text style={styles.swatchText}>{c.toUpperCase()}</Text>
+          {/* Right: Palette swatches */}
+          <View style={styles.rightCol}>
+            <View style={styles.paletteCard}>
+              <Text style={[styles.sectionTitle, { color: isDarkMode ? COLORS.dark.text.primary : COLORS.light.text.primary }]}>Generated Palette</Text>
+              <View style={styles.swatchGrid}>
+                {palette.map((c, idx) => (
+                  <Pressable key={idx} onPress={() => copyToClipboard(c)} style={[styles.swatch, { backgroundColor: c }]}>
+                    <Text style={styles.swatchText}>{c.toUpperCase()}</Text>
+                  </Pressable>
+                ))}
+              </View>
+              <View style={styles.actionsRow}>
+                <Pressable onPress={() => copyToClipboard(palette.join(', '))} style={styles.primaryBtn}>
+                  <Text style={styles.primaryBtnText}>Copy All</Text>
                 </Pressable>
-              ))}
-            </View>
-            <View style={styles.actionsRow}>
-              <Pressable onPress={() => copyToClipboard(palette.join(', '))} style={styles.primaryBtn}>
-                <Text style={styles.primaryBtnText}>Copy All</Text>
-              </Pressable>
+              </View>
             </View>
           </View>
         </View>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -234,9 +238,10 @@ const styles = StyleSheet.create({
   modeText: { fontSize: 12, fontWeight: '600', color: COLORS.neutral[700] },
   modeTextActive: { color: COLORS.primary[700] },
 
+  scrollArea: { flex: 1 },
   contentRow: { flex: 1, flexDirection: 'row', padding: SPACING[6], gap: 24 },
-  leftCol: { flex: 1, alignItems: 'center', minWidth: 380 },
-  rightCol: { flex: 1 },
+  leftCol: { flex: 1, alignItems: 'center', minWidth: 320 },
+  rightCol: { flex: 1, minWidth: 320 },
 
   wheelCard: { padding: SPACING[4], backgroundColor: '#ffffff', borderRadius: BORDER_RADIUS.xl, ...SHADOWS.base },
   inputRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: SPACING[4] },
