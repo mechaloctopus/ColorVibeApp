@@ -12,8 +12,7 @@ import {
 import { useSelector, useDispatch } from 'react-redux';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { RootState } from '../store/store';
-import { addGeneratedPalette } from '../store/slices/paletteSlice';
-import { addRecentColor } from '../store/slices/colorSlice';
+import { addGeneratedPalette, setCurrentColor, addRecentColor } from '../store/slices/paletteSlice';
 import {
   pickImageFromCamera,
   pickImageFromGallery,
@@ -91,6 +90,7 @@ const ImageColorExtractor: React.FC = () => {
       setSelectedColors([...selectedColors, color]);
     }
     dispatch(addRecentColor(color));
+    dispatch(setCurrentColor(color));
   };
 
   const generatePalette = () => {

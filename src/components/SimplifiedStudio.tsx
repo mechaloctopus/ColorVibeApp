@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, Pressable, TextInput, LayoutChangeEvent, Platform, ScrollView, useWindowDimensions } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../store/store';
@@ -60,6 +60,10 @@ const SimplifiedStudio: React.FC = () => {
   const [selectedHarmony, setSelectedHarmony] = useState<HarmonyId>('complementary');
   const [hexInput, setHexInput] = useState<string>(currentColor);
 
+  // Sync input with global currentColor changes from other workstations
+  useEffect(() => {
+    setHexInput(currentColor);
+  }, [currentColor]);
   // Wheel geometry state
   const wheelRef = useRef<View | null>(null);
   const { width: winW, height: winH } = useWindowDimensions();
@@ -129,23 +133,18 @@ const SimplifiedStudio: React.FC = () => {
   }, []);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: isDarkMode ? COLORS.dark.background : COLORS.light.background }]}> 
-      {/* Top bar */}
-      <View style={[styles.header, { borderBottomColor: isDarkMode ? 'rgba(255,255,255,0.08)' : COLORS.light.border }]}> 
-        <Text style={[styles.brand, { color: isDarkMode ? COLORS.dark.text.primary : COLORS.light.text.primary }]}>Color Vibe Studio</Text>
-        <View style={styles.headerRight}>
-          <Pressable accessibilityRole="button" onPress={() => dispatch(setCurrentWorkstation('theory-lab'))} style={styles.headerLink}>
-            <Text style={[styles.headerLinkText, { color: COLORS.primary[600] }]}>Labs</Text>
-          </Pressable>
-        </View>
-      </View>
+    <SafeAreaView style={[styles.container, { backgroundColor: isDarkMode ? COLORS.dark.background : COLORS.light.background }]}>
 
       {/* Controls: harmony */}
       <View style={styles.controlsRow}>
         <Text style={[styles.controlLabel, { color: isDarkMode ? COLORS.dark.text.secondary : COLORS.light.text.secondary }]}>Harmony</Text>
         <View style={styles.segmented}>
           {HARMONIES.map(h => (
-            <Pressable key={h.id} onPress={() => setSelectedHarmony(h.id)} style={[styles.segmentItem, selectedHarmony === h.id && styles.segmentItemActive]}> 
+            <Pressable key={h.id} onPress={() => setSelectedHarmony(h.id)} style={[
+              styles.segmentItem,
+              { borderColor: isDarkMode ? COLORS.dark.border : COLORS.neutral[200], backgroundColor: isDarkMode ? COLORS.dark.surface : '#fff' },
+              selectedHarmony === h.id && styles.segmentItemActive
+            ]}>
               <Text style={[styles.segmentText, selectedHarmony === h.id && styles.segmentTextActive]}>{h.label}</Text>
             </Pressable>
           ))}
@@ -153,7 +152,7 @@ const SimplifiedStudio: React.FC = () => {
         {selectedHarmony === 'musical' && (
           <View style={styles.musicalRow}>
             {MUSICAL_MODES.map(m => (
-              <Pressable key={m.id} onPress={() => dispatch(setMusicalMode(m.id))} style={[styles.modePill, currentMusicalMode === m.id && styles.modePillActive]}>
+              <Pressable key={m.id} onPress={() => dispatch(setMusicalMode(m.id))} style={[styles.modePill, { borderColor: isDarkMode ? COLORS.dark.border : COLORS.neutral[200], backgroundColor: isDarkMode ? COLORS.dark.surface : '#fff' }, currentMusicalMode === m.id && styles.modePillActive]}>
                 <Text style={[styles.modeText, currentMusicalMode === m.id && styles.modeTextActive]}>{m.label}</Text>
               </Pressable>
             ))}
@@ -166,7 +165,7 @@ const SimplifiedStudio: React.FC = () => {
         <View style={[styles.contentRow, winW < 1000 ? { flexDirection: 'column' } : null]}>
           {/* Left: Color wheel + HEX */}
           <View style={styles.leftCol}>
-            <View style={styles.wheelCard}>
+            <View style={[styles.wheelCard, { backgroundColor: isDarkMode ? COLORS.dark.card : COLORS.light.card }] }>
               <View
                 style={{ width: wheelSize, height: wheelSize }}
                 // Capture pointer/touch on web and mobile
@@ -195,7 +194,7 @@ const SimplifiedStudio: React.FC = () => {
 
           {/* Right: Palette swatches */}
           <View style={styles.rightCol}>
-            <View style={styles.paletteCard}>
+            <View style={[styles.paletteCard, { backgroundColor: isDarkMode ? COLORS.dark.card : COLORS.light.card }] }>
               <Text style={[styles.sectionTitle, { color: isDarkMode ? COLORS.dark.text.primary : COLORS.light.text.primary }]}>Generated Palette</Text>
               <View style={styles.swatchGrid}>
                 {palette.map((c, idx) => (

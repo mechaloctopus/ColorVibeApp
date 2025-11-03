@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../store/store';
-import { addRecentColor } from '../store/slices/paletteSlice';
+import { addRecentColor, setCurrentColor } from '../store/slices/paletteSlice';
 import AccessibilityAnalyzer from './common/AccessibilityAnalyzer';
 import { ColorBlindnessSimulator, ColorBlindnessType } from '../utils/advancedColorTechnologies';
 import { optimizedHexToRgb, optimizedRgbToHsl } from '../utils/optimizedColorEngine';
@@ -28,37 +28,42 @@ interface AccessibilityTest {
 const AccessibilityWorkstation: React.FC = () => {
   const { isDarkMode } = useSelector((state: RootState) => state.ui);
   const dispatch = useDispatch();
-  
+
   const [foregroundColor, setForegroundColor] = useState('#000000');
   const [backgroundColor, setBackgroundColor] = useState('#ffffff');
   const [testContext, setTestContext] = useState('');
   const [savedTests, setSavedTests] = useState<AccessibilityTest[]>([]);
   const [activeMode, setActiveMode] = useState<'analyzer' | 'simulator' | 'batch'>('analyzer');
   const [selectedColorBlindType, setSelectedColorBlindType] = useState<ColorBlindnessType>('protanopia');
-  
+
   // Animation values
   const modeTransition = useSharedValue(0);
   const resultScale = useSharedValue(1);
-  
+
+  const modeAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: modeTransition.value,
+    transform: [{ scale: modeTransition.value }],
+  }));
   useEffect(() => {
     // Animate mode transitions
     modeTransition.value = withSpring(1, { damping: 15, stiffness: 200 });
   }, [activeMode]);
-  
+
   const handleColorChange = (color: string, type: 'foreground' | 'background') => {
     if (type === 'foreground') {
       setForegroundColor(color);
     } else {
       setBackgroundColor(color);
     }
-    
+
     // Add to recent colors
     dispatch(addRecentColor(color));
-    
+    dispatch(setCurrentColor(color));
+
     // Haptic feedback
     PremiumHaptics.trigger(HapticType.LIGHT);
   };
-  
+
   const saveAccessibilityTest = () => {
     const test: AccessibilityTest = {
       id: Date.now().toString(),
@@ -74,38 +79,38 @@ const AccessibilityWorkstation: React.FC = () => {
         suggestions: 0, // Would be calculated by analyzer
       },
     };
-    
+
     setSavedTests(prev => [test, ...prev.slice(0, 19)]); // Keep last 20 tests
     setTestContext('');
-    
+
     // Haptic feedback
     PremiumHaptics.trigger(HapticType.SUCCESS);
   };
-  
+
   const loadSavedTest = (test: AccessibilityTest) => {
     setForegroundColor(test.foreground);
     setBackgroundColor(test.background);
     setTestContext(test.name);
-    
+
     // Haptic feedback
     PremiumHaptics.trigger(HapticType.LIGHT);
   };
-  
+
   const calculateContrastRatio = (fg: string, bg: string): number => {
     const fgRgb = optimizedHexToRgb(fg);
     const bgRgb = optimizedHexToRgb(bg);
 
     if (!fgRgb || !bgRgb) return 1;
-    
+
     const fgLuminance = getRelativeLuminance(fgRgb);
     const bgLuminance = getRelativeLuminance(bgRgb);
-    
+
     const lighter = Math.max(fgLuminance, bgLuminance);
     const darker = Math.min(fgLuminance, bgLuminance);
-    
+
     return (lighter + 0.05) / (darker + 0.05);
   };
-  
+
   const getRelativeLuminance = (rgb: { r: number; g: number; b: number }): number => {
     const { r, g, b } = rgb;
     const [rs, gs, bs] = [r, g, b].map(c => {
@@ -114,30 +119,30 @@ const AccessibilityWorkstation: React.FC = () => {
     });
     return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
   };
-  
+
   const getWCAGLevel = (ratio: number): string => {
     if (ratio >= 7) return 'AAA';
     if (ratio >= 4.5) return 'AA';
     if (ratio >= 3) return 'A';
     return 'FAIL';
   };
-  
+
   const getColorBlindIssues = (fg: string, bg: string): string[] => {
     const issues: string[] = [];
     const simulations = ColorBlindnessSimulator.getAllSimulations(fg);
-    
+
     Object.entries(simulations).forEach(([type, simColor]) => {
       const originalContrast = calculateContrastRatio(fg, bg);
       const simContrast = calculateContrastRatio(simColor, bg);
-      
+
       if (simContrast < originalContrast * 0.7) {
         issues.push(type);
       }
     });
-    
+
     return issues;
   };
-  
+
   const renderColorPicker = (color: string, type: 'foreground' | 'background', label: string) => {
     return (
       <View style={styles.colorPickerSection}>
@@ -175,19 +180,15 @@ const AccessibilityWorkstation: React.FC = () => {
       </View>
     );
   };
-  
+
   const renderAnalyzerMode = () => {
-    const animatedStyle = useAnimatedStyle(() => ({
-      opacity: modeTransition.value,
-      transform: [{ scale: modeTransition.value }],
-    }));
-    
+
     return (
-      <Animated.View style={[styles.modeContent, animatedStyle]}>
+      <Animated.View style={[styles.modeContent, modeAnimatedStyle]}>
         <View style={styles.colorControls}>
           {renderColorPicker(foregroundColor, 'foreground', 'Foreground Color')}
           {renderColorPicker(backgroundColor, 'background', 'Background Color')}
-          
+
           <View style={styles.contextSection}>
             <Text style={[styles.contextLabel, { color: isDarkMode ? COLORS.dark.text.primary : COLORS.light.text.primary }]}>
               Test Context (Optional)
@@ -208,7 +209,7 @@ const AccessibilityWorkstation: React.FC = () => {
               multiline
             />
           </View>
-          
+
           <TouchableOpacity
             style={[styles.saveButton, { backgroundColor: COLORS.primary[500] }]}
             onPress={saveAccessibilityTest}
@@ -216,7 +217,7 @@ const AccessibilityWorkstation: React.FC = () => {
             <Text style={styles.saveButtonText}>💾 Save Test</Text>
           </TouchableOpacity>
         </View>
-        
+
         <AccessibilityAnalyzer
           foregroundColor={foregroundColor}
           backgroundColor={backgroundColor}
@@ -231,25 +232,22 @@ const AccessibilityWorkstation: React.FC = () => {
       </Animated.View>
     );
   };
-  
+
   const renderSimulatorMode = () => {
-    const animatedStyle = useAnimatedStyle(() => ({
-      opacity: modeTransition.value,
-      transform: [{ scale: modeTransition.value }],
-    }));
-    
+
+
     const colorBlindTypes: ColorBlindnessType[] = [
-      'protanopia', 'protanomaly', 'deuteranopia', 'deuteranomaly', 
+      'protanopia', 'protanomaly', 'deuteranopia', 'deuteranomaly',
       'tritanopia', 'tritanomaly', 'achromatopsia', 'achromatomaly'
     ];
-    
+
     return (
-      <Animated.View style={[styles.modeContent, animatedStyle]}>
+      <Animated.View style={[styles.modeContent, modeAnimatedStyle]}>
         <View style={styles.simulatorControls}>
           <Text style={[styles.simulatorTitle, { color: isDarkMode ? COLORS.dark.text.primary : COLORS.light.text.primary }]}>
             Color Blindness Simulator
           </Text>
-          
+
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.typeSelector}>
             {colorBlindTypes.map((type) => (
               <TouchableOpacity
@@ -275,7 +273,7 @@ const AccessibilityWorkstation: React.FC = () => {
               </TouchableOpacity>
             ))}
           </ScrollView>
-          
+
           <View style={styles.simulationPreview}>
             <View style={styles.previewSection}>
               <Text style={[styles.previewLabel, { color: isDarkMode ? COLORS.dark.text.secondary : COLORS.light.text.secondary }]}>
@@ -287,14 +285,14 @@ const AccessibilityWorkstation: React.FC = () => {
                 </Text>
               </View>
             </View>
-            
+
             <View style={styles.previewSection}>
               <Text style={[styles.previewLabel, { color: isDarkMode ? COLORS.dark.text.secondary : COLORS.light.text.secondary }]}>
                 {selectedColorBlindType.charAt(0).toUpperCase() + selectedColorBlindType.slice(1)} View
               </Text>
               <View style={[styles.previewCard, { backgroundColor: backgroundColor }]}>
                 <Text style={[
-                  styles.previewText, 
+                  styles.previewText,
                   { color: ColorBlindnessSimulator.simulateColorBlindness(foregroundColor, selectedColorBlindType) }
                 ]}>
                   Sample Text Content
@@ -306,15 +304,12 @@ const AccessibilityWorkstation: React.FC = () => {
       </Animated.View>
     );
   };
-  
+
   const renderBatchMode = () => {
-    const animatedStyle = useAnimatedStyle(() => ({
-      opacity: modeTransition.value,
-      transform: [{ scale: modeTransition.value }],
-    }));
-    
+
+
     return (
-      <Animated.View style={[styles.modeContent, animatedStyle]}>
+      <Animated.View style={[styles.modeContent, modeAnimatedStyle]}>
         <View style={styles.batchHeader}>
           <Text style={[styles.batchTitle, { color: isDarkMode ? COLORS.dark.text.primary : COLORS.light.text.primary }]}>
             Saved Accessibility Tests
@@ -323,7 +318,7 @@ const AccessibilityWorkstation: React.FC = () => {
             {savedTests.length} tests saved
           </Text>
         </View>
-        
+
         <ScrollView style={styles.testsList} showsVerticalScrollIndicator={false}>
           {savedTests.length === 0 ? (
             <View style={styles.emptyState}>
@@ -347,7 +342,7 @@ const AccessibilityWorkstation: React.FC = () => {
                     {new Date(test.timestamp).toLocaleDateString()}
                   </Text>
                 </View>
-                
+
                 <View style={styles.testColors}>
                   <View style={[styles.testColorSwatch, { backgroundColor: test.foreground }]} />
                   <Text style={[styles.testColorText, { color: isDarkMode ? COLORS.dark.text.secondary : COLORS.light.text.secondary }]}>
@@ -355,7 +350,7 @@ const AccessibilityWorkstation: React.FC = () => {
                   </Text>
                   <View style={[styles.testColorSwatch, { backgroundColor: test.background }]} />
                 </View>
-                
+
                 <View style={styles.testResults}>
                   <View style={styles.testResult}>
                     <Text style={styles.testResultLabel}>Contrast:</Text>
@@ -379,7 +374,7 @@ const AccessibilityWorkstation: React.FC = () => {
       </Animated.View>
     );
   };
-  
+
   const getWCAGLevelColor = (level: string): string => {
     const colors = {
       AAA: COLORS.accent.green,
@@ -389,13 +384,13 @@ const AccessibilityWorkstation: React.FC = () => {
     };
     return colors[level as keyof typeof colors] || COLORS.accent.red;
   };
-  
+
   const modes = [
     { id: 'analyzer', title: 'Analyzer', icon: '🔍' },
     { id: 'simulator', title: 'Simulator', icon: '👁️' },
     { id: 'batch', title: 'Saved Tests', icon: '📋' },
   ];
-  
+
   return (
     <View style={[styles.container, { backgroundColor: isDarkMode ? COLORS.dark.background : COLORS.light.background }]}>
       <View style={styles.header}>
@@ -403,7 +398,7 @@ const AccessibilityWorkstation: React.FC = () => {
           ♿ Accessibility Workstation
         </Text>
       </View>
-      
+
       <View style={styles.modeNavigation}>
         {modes.map((mode) => (
           <TouchableOpacity
@@ -431,7 +426,7 @@ const AccessibilityWorkstation: React.FC = () => {
           </TouchableOpacity>
         ))}
       </View>
-      
+
       <View style={styles.content}>
         {activeMode === 'analyzer' && renderAnalyzerMode()}
         {activeMode === 'simulator' && renderSimulatorMode()}

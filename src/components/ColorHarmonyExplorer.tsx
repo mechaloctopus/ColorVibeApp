@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
-import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
+
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../store/store';
 import { setCurrentColor, addRecentColor } from '../store/slices/paletteSlice';
@@ -94,7 +94,8 @@ const HARMONY_RULES: HarmonyRule[] = [
 ];
 
 const ColorHarmonyExplorer: React.FC = () => {
-  const { isDarkMode, currentColor } = useSelector((state: RootState) => state.ui);
+  const isDarkMode = useSelector((state: RootState) => state.ui.isDarkMode);
+  const currentColor = useSelector((state: RootState) => state.palette.currentColor);
   const dispatch = useDispatch();
   
   const [selectedRule, setSelectedRule] = useState<HarmonyRule>(HARMONY_RULES[0]);
@@ -107,9 +108,7 @@ const ColorHarmonyExplorer: React.FC = () => {
 
   const [interactiveHue, setInteractiveHue] = useState(currentColorHsl.h);
   
-  // Animation values
-  const wheelRotation = useSharedValue(0);
-  const colorScales = harmonyColors.map(() => useSharedValue(1));
+
 
   useEffect(() => {
     generateHarmonyColors();
@@ -169,10 +168,7 @@ const ColorHarmonyExplorer: React.FC = () => {
     // Update current color
     dispatch(setCurrentColor(color));
 
-    // Animate color selection
-    colorScales[index].value = withSpring(1.2, {}, () => {
-      colorScales[index].value = withSpring(1);
-    });
+
   };
 
   const renderColorWheel = () => {
@@ -193,12 +189,10 @@ const ColorHarmonyExplorer: React.FC = () => {
           const x = centerX + Math.cos(radian) * radius - 20;
           const y = centerY + Math.sin(radian) * radius - 20;
 
-          const animatedStyle = useAnimatedStyle(() => ({
-            transform: [{ scale: colorScales[index]?.value || 1 }],
-          }));
+
 
           return (
-            <Animated.View
+            <View
               key={index}
               style={[
                 styles.harmonyColorDot,
@@ -209,15 +203,15 @@ const ColorHarmonyExplorer: React.FC = () => {
                   backgroundColor: color,
                   borderWidth: selectedColorIndex === index ? 3 : 2,
                   borderColor: selectedColorIndex === index ? '#ffffff' : 'rgba(255, 255, 255, 0.6)',
+                  transform: [{ scale: selectedColorIndex === index ? 1.1 : 1 }],
                 },
-                animatedStyle,
               ]}
             >
               <TouchableOpacity
                 style={styles.colorDotTouchArea}
                 onPress={() => selectColor(color, index)}
               />
-            </Animated.View>
+            </View>
           );
         })}
 

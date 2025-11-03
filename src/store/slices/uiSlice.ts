@@ -9,17 +9,15 @@ export interface UIState {
   showPaletteHistory: boolean;
   isExporting: boolean;
   selectedPaletteIndex: number;
-  currentColor: string;
 }
 
 const initialState: UIState = {
   currentWorkstation: 'main',
-  isDarkMode: false,
+  isDarkMode: true,
   showColorCodes: true,
   showPaletteHistory: false,
   isExporting: false,
   selectedPaletteIndex: 0,
-  currentColor: '#3498db',
 };
 
 const uiSlice = createSlice({
@@ -44,9 +42,7 @@ const uiSlice = createSlice({
     setSelectedPaletteIndex: (state, action: PayloadAction<number>) => {
       state.selectedPaletteIndex = action.payload;
     },
-    setCurrentColor: (state, action: PayloadAction<string>) => {
-      state.currentColor = action.payload;
-    },
+
   },
 });
 
@@ -57,7 +53,6 @@ export const {
   togglePaletteHistory,
   setIsExporting,
   setSelectedPaletteIndex,
-  setCurrentColor,
 } = uiSlice.actions;
 
 export default uiSlice.reducer;

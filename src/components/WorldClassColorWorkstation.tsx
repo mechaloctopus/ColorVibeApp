@@ -34,7 +34,7 @@ export const WorldClassColorWorkstation: React.FC<WorldClassColorWorkstationProp
   showAdvancedFeatures = true,
 }) => {
   const dispatch = useDispatch();
-  const { currentColor } = useSelector((state: RootState) => state.ui);
+  const { currentColor } = useSelector((state: RootState) => state.palette);
   
   // State management
   const [selectedColor, setSelectedColor] = useState(initialColor);

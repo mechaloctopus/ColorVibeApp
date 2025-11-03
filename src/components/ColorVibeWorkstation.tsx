@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, SafeAreaView, Pressable } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
+import { COLORS } from '../styles/designSystem';
 import { RootState } from '../store/store';
 import {
   MainStudio,
@@ -48,24 +49,27 @@ const ColorVibeWorkstation: React.FC = () => {
 
   const containerStyle = [
     styles.container,
-    { backgroundColor: isDarkMode ? '#1a1a1a' : '#ffffff' }
+    { backgroundColor: isDarkMode ? COLORS.dark.background : COLORS.light.background }
   ];
 
   return (
     <SafeAreaView style={containerStyle}>
       {/* Persistent header */}
-      <View style={styles.topHeader}>
-        <Text style={styles.brand}>Color Vibe Studio</Text>
+      <View style={[styles.topHeader, { backgroundColor: isDarkMode ? COLORS.dark.surface : COLORS.light.surface, borderBottomColor: isDarkMode ? COLORS.dark.border : COLORS.light.border }]}>
+        <Text style={[styles.brand, { color: isDarkMode ? COLORS.dark.text.primary : COLORS.light.text.primary }]}>Color Vibe Studio</Text>
         <View style={styles.navRow}>
-          <Pressable onPress={() => dispatch(setCurrentWorkstation('main'))} style={styles.navBtn}>
-            <Text style={styles.navText}>Studio</Text>
+          <Pressable onPress={() => dispatch(setCurrentWorkstation('main'))} style={[styles.navBtn, { borderColor: isDarkMode ? COLORS.dark.border : COLORS.light.border }]}>
+            <Text style={[styles.navText, { color: isDarkMode ? COLORS.dark.text.secondary : COLORS.light.text.secondary }]}>Studio</Text>
           </Pressable>
-          <Pressable onPress={() => dispatch(setCurrentWorkstation('theory-lab'))} style={styles.navBtn}>
-            <Text style={styles.navText}>Labs</Text>
+          <Pressable onPress={() => dispatch(setCurrentWorkstation('theory-lab'))} style={[styles.navBtn, { borderColor: isDarkMode ? COLORS.dark.border : COLORS.light.border }]}>
+            <Text style={[styles.navText, { color: isDarkMode ? COLORS.dark.text.secondary : COLORS.light.text.secondary }]}>Labs</Text>
           </Pressable>
           {currentWorkstation !== 'main' && (
-            <Pressable onPress={() => dispatch(setCurrentWorkstation('main'))} style={[styles.navBtn, styles.backBtn]}>
-              <Text style={[styles.navText, styles.backText]}>Back to Studio</Text>
+            <Pressable onPress={() => dispatch(setCurrentWorkstation('main'))} style={[
+              styles.navBtn,
+              { backgroundColor: isDarkMode ? 'rgba(52,152,219,0.16)' : 'rgba(52,152,219,0.1)', borderColor: COLORS.primary[500] }
+            ] }>
+              <Text style={[styles.navText, { color: isDarkMode ? COLORS.primary[300] : COLORS.primary[700], fontWeight: '700' }]}>Back to Studio</Text>
             </Pressable>
           )}
         </View>
@@ -93,18 +97,16 @@ const styles = StyleSheet.create({
     height: 56,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
-    backgroundColor: '#ffffff',
+    borderBottomColor: 'transparent',
+    backgroundColor: 'transparent',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
   brand: { fontSize: 16, fontWeight: '700' },
   navRow: { flexDirection: 'row', gap: 8 },
-  navBtn: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: '#e5e7eb' },
+  navBtn: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: 'transparent' },
   navText: { fontSize: 12, fontWeight: '600' },
-  backBtn: { backgroundColor: '#eff6ff', borderColor: '#bfdbfe' },
-  backText: { color: '#1d4ed8' },
   placeholder: {
     flex: 1,
     justifyContent: 'center',

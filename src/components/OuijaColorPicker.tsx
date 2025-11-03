@@ -140,22 +140,7 @@ const OuijaColorPicker: React.FC<OuijaColorPickerProps> = ({ size = width * 0.6 
         />
       </Svg>
       
-      {/* Mystical decorative elements */}
-      <View style={styles.decorativeElements}>
-        {/* Corner symbols */}
-        <View style={[styles.symbol, styles.topLeft]}>
-          <View style={styles.star} />
-        </View>
-        <View style={[styles.symbol, styles.topRight]}>
-          <View style={styles.moon} />
-        </View>
-        <View style={[styles.symbol, styles.bottomLeft]}>
-          <View style={styles.sun} />
-        </View>
-        <View style={[styles.symbol, styles.bottomRight]}>
-          <View style={styles.diamond} />
-        </View>
-      </View>
+
     </View>
   );
 };
@@ -169,59 +154,7 @@ const styles = StyleSheet.create({
   svg: {
     position: 'absolute',
   },
-  decorativeElements: {
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
-  },
-  symbol: {
-    position: 'absolute',
-    width: 20,
-    height: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  topLeft: {
-    top: 10,
-    left: 10,
-  },
-  topRight: {
-    top: 10,
-    right: 10,
-  },
-  bottomLeft: {
-    bottom: 10,
-    left: 10,
-  },
-  bottomRight: {
-    bottom: 10,
-    right: 10,
-  },
-  star: {
-    width: 16,
-    height: 16,
-    backgroundColor: '#ffd700',
-    transform: [{ rotate: '45deg' }],
-  },
-  moon: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: '#c0c0c0',
-    borderTopRightRadius: 0,
-  },
-  sun: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: '#ff6b35',
-  },
-  diamond: {
-    width: 12,
-    height: 12,
-    backgroundColor: '#9b59b6',
-    transform: [{ rotate: '45deg' }],
-  },
+
 });
 
 export default OuijaColorPicker;

@@ -7,9 +7,10 @@ import {
   ScrollView,
 } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
-import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
+
 import { RootState } from '../store/store';
 import { setCurrentWorkstation, WorkstationMode } from '../store/slices/uiSlice';
+import { COLORS } from '../styles/designSystem';
 
 interface WorkstationInfo {
   mode: WorkstationMode;
@@ -89,21 +90,13 @@ const WorkstationNavigator: React.FC = () => {
   const dispatch = useDispatch();
   const { currentWorkstation, isDarkMode } = useSelector((state: RootState) => state.ui);
 
-  const scales = WORKSTATIONS.reduce((acc, workstation) => {
-    acc[workstation.mode] = useSharedValue(1);
-    return acc;
-  }, {} as Record<WorkstationMode, Animated.SharedValue<number>>);
-
   const handleWorkstationPress = (mode: WorkstationMode) => {
-    scales[mode].value = withSpring(0.95, {}, () => {
-      scales[mode].value = withSpring(1);
-    });
     dispatch(setCurrentWorkstation(mode));
   };
 
-  const textColor = isDarkMode ? '#ffffff' : '#000000';
-  const backgroundColor = isDarkMode ? '#2a2a2a' : '#ffffff';
-  const borderColor = isDarkMode ? '#333333' : '#e0e0e0';
+  const textColor = isDarkMode ? COLORS.dark.text.primary : COLORS.light.text.primary;
+  const backgroundColor = isDarkMode ? COLORS.dark.surface : COLORS.light.surface;
+  const borderColor = isDarkMode ? COLORS.dark.border : COLORS.light.border;
 
   return (
     <View style={[styles.container, { backgroundColor, borderTopColor: borderColor }]}>
@@ -115,12 +108,10 @@ const WorkstationNavigator: React.FC = () => {
         {WORKSTATIONS.map((workstation) => {
           const isActive = currentWorkstation === workstation.mode;
           
-          const animatedStyle = useAnimatedStyle(() => ({
-            transform: [{ scale: scales[workstation.mode].value }],
-          }));
+
 
           return (
-            <Animated.View key={workstation.mode} style={animatedStyle}>
+            <View key={workstation.mode}>
               <TouchableOpacity
                 style={[
                   styles.workstationButton,
@@ -130,6 +121,7 @@ const WorkstationNavigator: React.FC = () => {
                   }
                 ]}
                 onPress={() => handleWorkstationPress(workstation.mode)}
+                activeOpacity={0.85}
               >
                 <Text style={[
                   styles.workstationIcon,
@@ -139,7 +131,7 @@ const WorkstationNavigator: React.FC = () => {
                 </Text>
                 <Text style={[
                   styles.workstationName,
-                  { 
+                  {
                     color: isActive ? '#ffffff' : textColor,
                     fontWeight: isActive ? 'bold' : '600'
                   }
@@ -148,7 +140,7 @@ const WorkstationNavigator: React.FC = () => {
                 </Text>
                 <Text style={[
                   styles.workstationDescription,
-                  { 
+                  {
                     color: isActive ? 'rgba(255, 255, 255, 0.8)' : textColor,
                     opacity: isActive ? 0.8 : 0.6
                   }
@@ -156,7 +148,7 @@ const WorkstationNavigator: React.FC = () => {
                   {workstation.description}
                 </Text>
               </TouchableOpacity>
-            </Animated.View>
+            </View>
           );
         })}
       </ScrollView>
@@ -173,7 +165,7 @@ const styles = StyleSheet.create({
     zIndex: 20,
     borderTopWidth: 1,
     paddingVertical: 10,
-    backgroundColor: '#ffffff',
+    backgroundColor: 'transparent',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.05,

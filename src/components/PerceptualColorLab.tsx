@@ -26,40 +26,45 @@ import Animated, { useSharedValue, useAnimatedStyle, withSpring, withTiming } fr
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../store/store';
 import { addRecentColor, setCurrentColor } from '../store/slices/paletteSlice';
-import { 
-  PerceptualColorEngine, 
-  ViewingConditions, 
+import {
+  PerceptualColorEngine,
+  ViewingConditions,
   VIEWING_CONDITIONS,
   ColorAppearance,
   ContrastContext,
   ColorMemory,
-  CulturalColorMeaning 
+  CulturalColorMeaning
 } from '../utils/perceptualColorEngine';
 import { optimizedHexToRgb, optimizedRgbToHsl, optimizedHslToHex } from '../utils/optimizedColorEngine';
 import { COLORS, SPACING, BORDER_RADIUS, SHADOWS, TYPOGRAPHY } from '../styles/designSystem';
 
 const PerceptualColorLab: React.FC = () => {
-  const { isDarkMode, currentColor } = useSelector((state: RootState) => state.ui);
+  const isDarkMode = useSelector((state: RootState) => state.ui.isDarkMode);
+  const currentColor = useSelector((state: RootState) => state.palette.currentColor);
   const dispatch = useDispatch();
-  
+
   const [targetColor, setTargetColor] = useState('#3498db');
   const [backgroundColor, setBackgroundColor] = useState('#ffffff');
   const [viewingCondition, setViewingCondition] = useState<keyof typeof VIEWING_CONDITIONS>('sRGB');
   const [activeTab, setActiveTab] = useState<'appearance' | 'contrast' | 'memory' | 'culture' | 'harmony'>('appearance');
   const [timeElapsed, setTimeElapsed] = useState(0);
   const [selectedCulture, setSelectedCulture] = useState('western');
-  
+
   // Analysis results
   const [colorAppearance, setColorAppearance] = useState<ColorAppearance | null>(null);
   const [contrastAnalysis, setContrastAnalysis] = useState<ContrastContext | null>(null);
   const [memorySimulation, setMemorySimulation] = useState<ColorMemory | null>(null);
   const [culturalAnalysis, setCulturalAnalysis] = useState<CulturalColorMeaning | null>(null);
   const [perceptualHarmony, setPerceptualHarmony] = useState<string[]>([]);
-  
+
   // Animation values
   const analysisOpacity = useSharedValue(0);
   const resultScale = useSharedValue(0.8);
 
+  const appearanceAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: analysisOpacity.value,
+    transform: [{ scale: resultScale.value }],
+  }));
   useEffect(() => {
     analyzeColor();
   }, [targetColor, backgroundColor, viewingCondition, timeElapsed, selectedCulture]);
@@ -74,7 +79,7 @@ const PerceptualColorLab: React.FC = () => {
     try {
       // Color Appearance Analysis
       const appearance = PerceptualColorEngine.calculateColorAppearance(
-        targetColor, 
+        targetColor,
         VIEWING_CONDITIONS[viewingCondition]
       );
       setColorAppearance(appearance);
@@ -110,7 +115,7 @@ const PerceptualColorLab: React.FC = () => {
   const selectColor = (color: string) => {
     setTargetColor(color);
     dispatch(addRecentColor(color));
-    
+
     const rgb = optimizedHexToRgb(color);
     if (rgb) {
       const hsl = optimizedRgbToHsl(rgb.r, rgb.g, rgb.b);
@@ -121,17 +126,14 @@ const PerceptualColorLab: React.FC = () => {
   const renderAppearanceTab = () => {
     if (!colorAppearance) return null;
 
-    const animatedStyle = useAnimatedStyle(() => ({
-      opacity: analysisOpacity.value,
-      transform: [{ scale: resultScale.value }],
-    }));
+
 
     return (
-      <Animated.View style={[styles.analysisSection, animatedStyle]}>
+      <Animated.View style={[styles.analysisSection, appearanceAnimatedStyle]}>
         <Text style={[styles.sectionTitle, { color: isDarkMode ? COLORS.dark.text.primary : COLORS.light.text.primary }]}>
           CIECAM02 Color Appearance
         </Text>
-        
+
         <View style={styles.appearanceGrid}>
           <View style={[styles.appearanceCard, { backgroundColor: isDarkMode ? COLORS.dark.card : COLORS.light.card }]}>
             <Text style={[styles.appearanceLabel, { color: isDarkMode ? COLORS.dark.text.secondary : COLORS.light.text.secondary }]}>
@@ -165,14 +167,14 @@ const PerceptualColorLab: React.FC = () => {
               {colorAppearance.hue.toFixed(1)}°
             </Text>
             <View style={[styles.hueWheel, { borderColor: isDarkMode ? COLORS.dark.border : COLORS.light.border }]}>
-              <View 
+              <View
                 style={[
-                  styles.hueIndicator, 
-                  { 
+                  styles.hueIndicator,
+                  {
                     backgroundColor: targetColor,
                     transform: [{ rotate: `${colorAppearance.hue}deg` }]
                   }
-                ]} 
+                ]}
               />
             </View>
           </View>
@@ -231,7 +233,7 @@ const PerceptualColorLab: React.FC = () => {
         <Text style={[styles.sectionTitle, { color: isDarkMode ? COLORS.dark.text.primary : COLORS.light.text.primary }]}>
           Simultaneous Contrast Analysis
         </Text>
-        
+
         <View style={styles.contrastDemo}>
           <View style={[styles.contrastBackground, { backgroundColor: backgroundColor }]}>
             <View style={[styles.colorSample, { backgroundColor: targetColor }]}>
@@ -253,7 +255,7 @@ const PerceptualColorLab: React.FC = () => {
                 key={color}
                 style={[
                   styles.backgroundOption,
-                  { 
+                  {
                     backgroundColor: color,
                     borderWidth: backgroundColor === color ? 3 : 1,
                     borderColor: backgroundColor === color ? COLORS.primary[500] : 'rgba(255, 255, 255, 0.3)',
@@ -297,7 +299,7 @@ const PerceptualColorLab: React.FC = () => {
         <Text style={[styles.sectionTitle, { color: isDarkMode ? COLORS.dark.text.primary : COLORS.light.text.primary }]}>
           Color Memory Simulation
         </Text>
-        
+
         <View style={styles.memoryDemo}>
           <View style={[styles.memoryComparison, { backgroundColor: isDarkMode ? COLORS.dark.card : COLORS.light.card }]}>
             <View style={styles.memoryItem}>
@@ -361,7 +363,7 @@ const PerceptualColorLab: React.FC = () => {
         <Text style={[styles.sectionTitle, { color: isDarkMode ? COLORS.dark.text.primary : COLORS.light.text.primary }]}>
           Cultural Color Semantics
         </Text>
-        
+
         <View style={styles.cultureSelector}>
           {['western', 'eastern'].map((culture) => (
             <TouchableOpacity
@@ -419,10 +421,10 @@ const PerceptualColorLab: React.FC = () => {
           </Text>
           <View style={[styles.weightBar, { backgroundColor: isDarkMode ? COLORS.dark.surface : COLORS.light.surface }]}>
             <View style={[
-              styles.weightProgress, 
-              { 
-                width: `${culturalAnalysis.emotionalWeight * 100}%`, 
-                backgroundColor: COLORS.accent.orange 
+              styles.weightProgress,
+              {
+                width: `${culturalAnalysis.emotionalWeight * 100}%`,
+                backgroundColor: COLORS.accent.orange
               }
             ]} />
           </View>
@@ -440,7 +442,7 @@ const PerceptualColorLab: React.FC = () => {
         <Text style={[styles.sectionTitle, { color: isDarkMode ? COLORS.dark.text.primary : COLORS.light.text.primary }]}>
           Perceptual Color Harmony
         </Text>
-        
+
         <View style={styles.harmonyPalette}>
           {perceptualHarmony.map((color, index) => (
             <TouchableOpacity
