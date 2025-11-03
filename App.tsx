@@ -12,7 +12,7 @@ export default function App() {
       <GestureHandlerRootView style={styles.container}>
         <View style={styles.container}>
           <ColorVibeWorkstation />
-          <StatusBar style="light" />
+          <StatusBar style="dark" />
         </View>
       </GestureHandlerRootView>
     </Provider>
@@ -22,6 +22,6 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#ffffff',
   },
 });

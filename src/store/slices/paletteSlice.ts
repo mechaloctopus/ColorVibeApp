@@ -28,7 +28,7 @@ const initialState: PaletteState = {
   generatedPalettes: [],
   currentMusicalMode: 'major',
   currentPaletteType: 'complementary',
-  currentColor: '#3b82f6',
+  currentColor: '#3498db',
   recentColors: [],
 };
 

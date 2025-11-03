@@ -13,7 +13,8 @@ import {
   PerceptualColorLab,
   AccessibilityWorkstation,
 } from './workstations';
-import { WorkstationNavigator, PremiumNavigationSystem } from './common';
+import SimplifiedStudio from './SimplifiedStudio';
+// Navigation overlays removed for web clarity
 
 // All workstations are now fully implemented - no more placeholders!
 
@@ -23,7 +24,7 @@ const ColorVibeWorkstation: React.FC = () => {
   const renderCurrentWorkstation = () => {
     switch (currentWorkstation) {
       case 'main':
-        return <MainStudio />;
+        return <SimplifiedStudio />;
       case 'image-extractor':
         return <ImageColorExtractor />;
       case 'theory-lab':
@@ -41,7 +42,7 @@ const ColorVibeWorkstation: React.FC = () => {
       case 'trends-inspiration':
         return <ColorTrendsInspiration />;
       default:
-        return <MainStudio />;
+        return <SimplifiedStudio />;
     }
   };
 
@@ -55,8 +56,7 @@ const ColorVibeWorkstation: React.FC = () => {
       <View style={styles.workstationContainer}>
         {renderCurrentWorkstation()}
       </View>
-      <WorkstationNavigator />
-      <PremiumNavigationSystem />
+
     </SafeAreaView>
   );
 };

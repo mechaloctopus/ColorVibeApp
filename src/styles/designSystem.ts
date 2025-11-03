@@ -12,7 +12,7 @@ export const COLORS = {
     200: '#bfdbfe',
     300: '#93c5fd',
     400: '#60a5fa',
-    500: '#3b82f6', // Main primary
+    500: '#3498db', // Main primary (updated)
     600: '#2563eb',
     700: '#1d4ed8',
     800: '#1e40af',
@@ -63,7 +63,7 @@ export const COLORS = {
     success: '#10b981',
     warning: '#f59e0b',
     error: '#ef4444',
-    info: '#3b82f6',
+    info: '#3498db',
   },
   
   // Dark Mode Colors
@@ -115,7 +115,7 @@ export const COLORS = {
     light: '#e2e8f0',
     medium: '#cbd5e1',
     dark: '#94a3b8',
-    focus: '#3b82f6',
+    focus: '#3498db',
   },
 } as const;
 

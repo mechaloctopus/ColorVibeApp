@@ -14,12 +14,12 @@ export interface UIState {
 
 const initialState: UIState = {
   currentWorkstation: 'main',
-  isDarkMode: true,
+  isDarkMode: false,
   showColorCodes: true,
   showPaletteHistory: false,
   isExporting: false,
   selectedPaletteIndex: 0,
-  currentColor: '#3b82f6',
+  currentColor: '#3498db',
 };
 
 const uiSlice = createSlice({
